@@ -301,7 +301,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "C:\\Projects\\Project\\ipa\\ipa\\ipa-backend\\src\\generated\\client",
+      "value": "C:\\Users\\mfura\\Documents\\work\\group\\IPA\\ipa-backend\\src\\generated\\client",
       "fromEnvVar": null
     },
     "config": {
@@ -315,7 +315,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "C:\\Projects\\Project\\ipa\\ipa\\ipa-backend\\prisma\\schema.prisma",
+    "sourceFilePath": "C:\\Users\\mfura\\Documents\\work\\group\\IPA\\ipa-backend\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {

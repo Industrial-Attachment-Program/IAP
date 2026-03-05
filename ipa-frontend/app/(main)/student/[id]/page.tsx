@@ -70,20 +70,6 @@ export default function StudentDashboard() {
             return;
         }
 
-        try {
-            const user = JSON.parse(storedUser);
-            // Case 1: Student trying to access someone else's profile
-            if (user.role === "STUDENT" && user.studentProfile?.id !== studentId) {
-                router.replace(`/student/${user.studentProfile?.id}`);
-                return;
-            }
-            // Case 2: Supervisor/Admin trying to access a profile, always allow as long as ID is valid
-        } catch (e) {
-            console.error("Error parsing user data", e);
-            router.replace("/login");
-            return;
-        }
-
         setIsAuthChecking(false);
         fetchStudent();
         fetchTasks();
@@ -95,6 +81,21 @@ export default function StudentDashboard() {
             // Backend findAll returns { student: {...} } when id is provided
             const s = data.student;
             if (s) {
+                // IMPORTANT: Only after we confirm the student exists, 
+                // we check if the current user has permission to see it.
+                const storedUser = localStorage.getItem("user");
+                if (storedUser) {
+                    try {
+                        const user = JSON.parse(storedUser);
+                        if (user.role === "STUDENT" && user.studentProfile?.id !== studentId) {
+                            router.replace(`/student/${user.studentProfile?.id}`);
+                            return;
+                        }
+                    } catch (e) {
+                        console.error("Error parsing user data", e);
+                    }
+                }
+
                 if (s.user?.name) {
                     setStudentName(s.user.name);
                 }

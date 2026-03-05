@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
+const swagger_1 = require("@nestjs/swagger");
 const auth_service_1 = require("./auth.service");
 const jwt_auth_guard_1 = require("./jwt-auth.guard");
 let AuthController = class AuthController {
@@ -42,6 +43,18 @@ exports.AuthController = AuthController;
 __decorate([
     (0, common_1.Post)('login'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'User login', description: 'Authenticate user and receive JWT token' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                email: { type: 'string', example: 'admin@rca.ac.rw' },
+                password: { type: 'string', example: 'secretunlocked123' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Login successful, returns access token and user info' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid credentials' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -50,6 +63,10 @@ __decorate([
 __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Get)('me'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get current user', description: 'Retrieve authenticated user profile information' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Returns current user profile' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Unauthorized - Invalid or expired token' }),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -58,6 +75,17 @@ __decorate([
 __decorate([
     (0, common_1.Post)('forgot-password'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Request password reset', description: 'Send password reset email to user' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                email: { type: 'string', example: 'user@example.com' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Password reset email sent' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'User not found' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -66,12 +94,25 @@ __decorate([
 __decorate([
     (0, common_1.Post)('reset-password'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Reset password', description: 'Reset user password using token from email' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                token: { type: 'string', example: 'reset-token-from-email' },
+                password: { type: 'string', example: 'newPassword123' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Password reset successful' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid or expired token' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "resetPassword", null);
 exports.AuthController = AuthController = __decorate([
+    (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])
 ], AuthController);

@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LogEntriesController = void 0;
 const common_1 = require("@nestjs/common");
+const swagger_1 = require("@nestjs/swagger");
 const log_entries_service_1 = require("./log-entries.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let LogEntriesController = class LogEntriesController {
@@ -33,6 +34,10 @@ let LogEntriesController = class LogEntriesController {
 exports.LogEntriesController = LogEntriesController;
 __decorate([
     (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get student log entries', description: 'Retrieve all log entries for a specific student' }),
+    (0, swagger_1.ApiQuery)({ name: 'studentId', type: 'number', description: 'Student ID', example: 1 }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Returns array of log entries' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Unauthorized' }),
     __param(0, (0, common_1.Query)('studentId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -40,6 +45,18 @@ __decorate([
 ], LogEntriesController.prototype, "findByStudent", null);
 __decorate([
     (0, common_1.Post)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Create log entry', description: 'Create a new daily log entry for a student' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                studentId: { type: 'number', example: 1 },
+                content: { type: 'string', example: 'Today I worked on implementing the authentication module...' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Log entry created successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid input data' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -47,12 +64,18 @@ __decorate([
 ], LogEntriesController.prototype, "create", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Delete log entry', description: 'Delete a specific log entry by ID' }),
+    (0, swagger_1.ApiParam)({ name: 'id', type: 'number', description: 'Log entry ID', example: 1 }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Log entry deleted successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Log entry not found' }),
     __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
 ], LogEntriesController.prototype, "delete", null);
 exports.LogEntriesController = LogEntriesController = __decorate([
+    (0, swagger_1.ApiTags)('Log Entries'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     (0, common_1.Controller)('daily-log'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [log_entries_service_1.LogEntriesService])
