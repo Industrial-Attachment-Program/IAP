@@ -56,15 +56,6 @@ export default function StudentDashboard() {
     const [supervisorInfo, setSupervisorInfo] = useState<{ name: string; email: string; phone: string } | null>(null);
 
     useEffect(() => {
-        // Auth guard — redirect to login if not authenticated
-        const token = localStorage.getItem("token");
-        const storedUser = localStorage.getItem("user");
-
-        if (!token || !storedUser) {
-            router.replace("/login");
-            return;
-        }
-
         if (Number.isNaN(studentId)) {
             router.replace('/not-found');
             return;
@@ -72,7 +63,6 @@ export default function StudentDashboard() {
 
         setIsAuthChecking(false);
         fetchStudent();
-        fetchTasks();
     }, [studentId, router]);
 
     const fetchStudent = async () => {
@@ -82,19 +72,29 @@ export default function StudentDashboard() {
             const s = data.student;
             if (s) {
                 // IMPORTANT: Only after we confirm the student exists, 
-                // we check if the current user has permission to see it.
+                // we check if the current user is logged in and has permission.
                 const storedUser = localStorage.getItem("user");
-                if (storedUser) {
-                    try {
-                        const user = JSON.parse(storedUser);
-                        if (user.role === "STUDENT" && user.studentProfile?.id !== studentId) {
-                            router.replace(`/student/${user.studentProfile?.id}`);
-                            return;
-                        }
-                    } catch (e) {
-                        console.error("Error parsing user data", e);
-                    }
+                const token = localStorage.getItem("token");
+
+                if (!storedUser || !token) {
+                    router.replace("/login");
+                    return;
                 }
+
+                try {
+                    const user = JSON.parse(storedUser);
+                    if (user.role === "STUDENT" && user.studentProfile?.id !== studentId) {
+                        router.replace(`/student/${user.studentProfile?.id}`);
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Error parsing user data", e);
+                    router.replace("/login");
+                    return;
+                }
+
+                // If we reach here, user is logged in and permitted
+                fetchTasks();
 
                 if (s.user?.name) {
                     setStudentName(s.user.name);

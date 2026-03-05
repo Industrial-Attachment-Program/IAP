@@ -42,7 +42,7 @@ export default function NotFound() {
                     </div>
 
                     <h1 className="text-5xl font-black text-primary font-heading tracking-tight mb-6">
-                        Node <span className="text-primary/30 italic">Not Found</span>
+                        Page <span className="text-primary/30 italic">Not Found</span>
                     </h1>
 
                     <p className="text-xl text-primary/60 font-medium leading-relaxed mb-12 max-w-lg mx-auto">
