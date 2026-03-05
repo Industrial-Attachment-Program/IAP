@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+    Injectable,
+    NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { WeeklyLogStatus } from '@prisma/client';
@@ -11,6 +16,10 @@ export class WeeklyLogsService {
     ) { }
 
     async findByStudent(studentId: number) {
+        if (!studentId) {
+            throw new BadRequestException('studentId is required');
+        }
+
         return this.prisma.weeklyLog.findMany({
             where: { studentId },
             include: { dailyEntries: true },
@@ -23,25 +32,31 @@ export class WeeklyLogsService {
             where: { id },
             include: { dailyEntries: true },
         });
+
         if (!log) throw new NotFoundException('Weekly log not found');
         return log;
     }
 
     async findOrCreateWeek(studentId: number, date: Date) {
-        // Logic to determine week number based on internship start date or current date
         const student = await this.prisma.student.findUnique({
             where: { id: studentId },
         });
 
         if (!student) throw new NotFoundException('Student not found');
 
-        const startDate = student.internshipStart || new Date(date.getFullYear(), 0, 1);
-        const diffInMs = date.getTime() - startDate.getTime();
-        const weekNumber = Math.max(1, Math.ceil(diffInMs / (1000 * 60 * 60 * 24 * 7)));
+        const startDate =
+            student.internshipStart || new Date(date.getFullYear(), 0, 1);
 
-        // Find the Monday and Sunday of that week
+        const diffInMs = date.getTime() - startDate.getTime();
+        const weekNumber = Math.max(
+            1,
+            Math.ceil(diffInMs / (1000 * 60 * 60 * 24 * 7)),
+        );
+
         const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - (date.getDay() === 0 ? 6 : date.getDay() - 1));
+        weekStart.setDate(
+            date.getDate() - (date.getDay() === 0 ? 6 : date.getDay() - 1),
+        );
         weekStart.setHours(0, 0, 0, 0);
 
         const weekEnd = new Date(weekStart);
@@ -72,7 +87,10 @@ export class WeeklyLogsService {
         return weeklyLog;
     }
 
-    async submitWeek(id: number, data: { summary: string; objectives: string }) {
+    async submitWeek(
+        id: number,
+        data: { summary: string; objectives: string },
+    ) {
         const weeklyLog = await this.prisma.weeklyLog.update({
             where: { id },
             data: {
@@ -83,7 +101,6 @@ export class WeeklyLogsService {
             include: { student: { include: { supervisor: true } } },
         });
 
-        // Notify supervisor
         if (weeklyLog.student.supervisor?.userId) {
             await this.notificationsService.createNotification({
                 userId: weeklyLog.student.supervisor.userId,
@@ -97,15 +114,22 @@ export class WeeklyLogsService {
         return weeklyLog;
     }
 
-    async approveWeek(id: number, supervisorUserId: number, note?: string) {
+    async approveWeek(
+        id: number,
+        supervisorUserId: number,
+        note?: string,
+    ) {
         const log = await this.prisma.weeklyLog.findUnique({
             where: { id },
             include: { student: { include: { supervisor: true } } },
         });
 
         if (!log) throw new NotFoundException('Weekly log not found');
+
         if (log.student.supervisor.userId !== supervisorUserId) {
-            throw new ForbiddenException('You are not authorized to approve this log');
+            throw new ForbiddenException(
+                'You are not authorized to approve this log',
+            );
         }
 
         const updatedLog = await this.prisma.weeklyLog.update({
@@ -117,7 +141,6 @@ export class WeeklyLogsService {
             },
         });
 
-        // Notify student
         await this.notificationsService.createNotification({
             userId: log.student.userId,
             title: 'Weekly Log Approved',
@@ -129,15 +152,22 @@ export class WeeklyLogsService {
         return updatedLog;
     }
 
-    async rejectWeek(id: number, supervisorUserId: number, note: string) {
+    async rejectWeek(
+        id: number,
+        supervisorUserId: number,
+        note: string,
+    ) {
         const log = await this.prisma.weeklyLog.findUnique({
             where: { id },
             include: { student: { include: { supervisor: true } } },
         });
 
         if (!log) throw new NotFoundException('Weekly log not found');
+
         if (log.student.supervisor.userId !== supervisorUserId) {
-            throw new ForbiddenException('You are not authorized to reject this log');
+            throw new ForbiddenException(
+                'You are not authorized to reject this log',
+            );
         }
 
         const updatedLog = await this.prisma.weeklyLog.update({
@@ -148,7 +178,6 @@ export class WeeklyLogsService {
             },
         });
 
-        // Notify student
         await this.notificationsService.createNotification({
             userId: log.student.userId,
             title: 'Weekly Log Revision Requested',
@@ -158,5 +187,41 @@ export class WeeklyLogsService {
         });
 
         return updatedLog;
+    }
+
+    async upsert(data: any) {
+        const { studentId, weekNumber, ...rest } = data;
+
+        const sId = Number(studentId);
+        const wNum = Number(weekNumber);
+
+        if (!sId || !wNum) {
+            throw new BadRequestException(
+                'studentId and weekNumber are required',
+            );
+        }
+
+        if (rest.startDate) rest.startDate = new Date(rest.startDate);
+        if (rest.endDate) rest.endDate = new Date(rest.endDate);
+        if (rest.dateSigned) rest.dateSigned = new Date(rest.dateSigned);
+
+        const existing = await this.prisma.weeklyLog.findFirst({
+            where: { studentId: sId, weekNumber: wNum },
+        });
+
+        if (existing) {
+            return this.prisma.weeklyLog.update({
+                where: { id: existing.id },
+                data: { ...rest },
+            });
+        }
+
+        return this.prisma.weeklyLog.create({
+            data: {
+                studentId: sId,
+                weekNumber: wNum,
+                ...rest,
+            },
+        });
     }
 }

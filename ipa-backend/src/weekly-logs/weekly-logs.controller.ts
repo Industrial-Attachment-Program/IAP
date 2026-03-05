@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, ParseIntPipe, Request } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Post,
+    Patch,
+    Body,
+    Param,
+    Query,
+    UseGuards,
+    ParseIntPipe,
+    Request,
+} from '@nestjs/common';
 import { WeeklyLogsService } from './weekly-logs.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -28,7 +39,7 @@ export class WeeklyLogsController {
     @Patch(':id/submit')
     async submit(
         @Param('id', ParseIntPipe) id: number,
-        @Body() body: { summary: string; objectives: string }
+        @Body() body: { summary: string; objectives: string },
     ) {
         return this.weeklyLogsService.submitWeek(id, body);
     }
@@ -39,7 +50,7 @@ export class WeeklyLogsController {
     async approve(
         @Param('id', ParseIntPipe) id: number,
         @Body() body: { note?: string },
-        @Request() req: any
+        @Request() req: any,
     ) {
         return this.weeklyLogsService.approveWeek(id, req.user.id, body.note);
     }
@@ -50,7 +61,7 @@ export class WeeklyLogsController {
     async reject(
         @Param('id', ParseIntPipe) id: number,
         @Body() body: { note: string },
-        @Request() req: any
+        @Request() req: any,
     ) {
         return this.weeklyLogsService.rejectWeek(id, req.user.id, body.note);
     }

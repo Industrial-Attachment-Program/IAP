@@ -8,8 +8,11 @@ import { TasksModule } from './tasks/tasks.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { LogEntriesModule } from './log-entries/log-entries.module';
-import { ChatModule } from './chat/chat.module';
 import { WeeklyLogsModule } from './weekly-logs/weekly-logs.module';
+import { IapReportsModule } from './iap-reports/iap-reports.module';
+
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -22,8 +25,19 @@ import { WeeklyLogsModule } from './weekly-logs/weekly-logs.module';
     NotificationsModule,
     LogEntriesModule,
     WeeklyLogsModule,
-    ChatModule
+    IapReportsModule,
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 10,
+    }]),
+
   ],
   controllers: [AppController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule { }

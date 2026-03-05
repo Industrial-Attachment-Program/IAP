@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -23,8 +23,10 @@ interface Task {
 
 export default function StudentDashboard() {
     const params = useParams();
+    const router = useRouter();
     const studentId = Number(params.id);
 
+    const [isAuthChecking, setIsAuthChecking] = useState(true);
     const [showLogForm, setShowLogForm] = useState(false);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
@@ -54,35 +56,77 @@ export default function StudentDashboard() {
     const [supervisorInfo, setSupervisorInfo] = useState<{ name: string; email: string; phone: string } | null>(null);
 
     useEffect(() => {
-        if (!Number.isNaN(studentId)) {
-            fetchStudent();
-            fetchTasks();
+        // Auth guard — redirect to login if not authenticated
+        const token = localStorage.getItem("token");
+        const storedUser = localStorage.getItem("user");
+
+        if (!token || !storedUser) {
+            router.replace("/login");
+            return;
         }
-    }, [studentId]);
+
+        if (Number.isNaN(studentId)) {
+            router.replace('/not-found');
+            return;
+        }
+
+        setIsAuthChecking(false);
+        fetchStudent();
+        fetchTasks();
+    }, [studentId, router]);
 
     const fetchStudent = async () => {
         try {
             const data = await apiFetch(`/students?id=${studentId}`);
+<<<<<<< HEAD
             if (data.student) {
                 setStudentName(data.student.user?.name || data.student.fullName || "Student");
+=======
+            // Backend findAll returns { student: {...} } when id is provided
+            const s = data.student;
+            if (s) {
+                // IMPORTANT: Only after we confirm the student exists, 
+                // we check if the current user has permission to see it.
+                const storedUser = localStorage.getItem("user");
+                if (storedUser) {
+                    try {
+                        const user = JSON.parse(storedUser);
+                        if (user.role === "STUDENT" && user.studentProfile?.id !== studentId) {
+                            router.replace(`/student/${user.studentProfile?.id}`);
+                            return;
+                        }
+                    } catch (e) {
+                        console.error("Error parsing user data", e);
+                    }
+                }
+
+                if (s.user?.name) {
+                    setStudentName(s.user.name);
+                }
+>>>>>>> 2bbe396d2e25605d5973c961b75a8a4ea493b20b
                 setProfileData({
-                    phone: data.student.phone || "",
-                    address: data.student.address || "",
-                    companyName: data.student.companyName || "",
-                    companyAddress: data.student.companyAddress || "",
-                    supervisorName: data.student.supervisorName || "",
-                    supervisorEmail: data.student.supervisorEmail || "",
+                    phone: s.phone || "",
+                    address: s.address || "",
+                    companyName: s.companyName || "",
+                    companyAddress: s.companyAddress || "",
+                    supervisorName: s.supervisorName || "",
+                    supervisorEmail: s.supervisorEmail || "",
                 });
-                if (data.student.supervisor) {
+                if (s.supervisor) {
                     setSupervisorInfo({
-                        name: data.student.supervisor.user.name,
-                        email: data.student.supervisor.user.email,
-                        phone: data.student.supervisor.phone || "N/A",
+                        name: s.supervisor.user.name,
+                        email: s.supervisor.user.email,
+                        phone: s.supervisor.phone || "N/A",
                     });
                 }
+            } else {
+                router.replace('/not-found');
             }
-        } catch (error) {
-            console.error("Error fetching student:", error);
+        } catch (error: any) {
+            if (error.message !== 'Not Found' && error.message !== 'Student not found') {
+                console.error("Error fetching student:", error);
+            }
+            router.replace('/not-found');
         }
     };
 
@@ -153,6 +197,17 @@ export default function StudentDashboard() {
             console.error("Error submitting log:", error);
         }
     };
+
+    if (isAuthChecking) {
+        return (
+            <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
+                <div className="animate-pulse flex flex-col items-center gap-4">
+                    <div className="h-10 w-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                    <p className="text-primary font-bold text-sm">Verifying access...</p>
+                </div>
+            </div>
+        );
+    }
 
     const tasksByStatus = {
         todo: tasks.filter(t => t.status === "PENDING"),
