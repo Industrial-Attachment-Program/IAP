@@ -52,8 +52,9 @@ export function TopBar({ role, userId }: TopBarProps) {
             }
 
         } catch (error) {
-            // Silently log backend connectivity issue
-            console.log("TopBar: Backend unreachable - using local session data.");
+            // Silently log backend connectivity issue or auth failure
+            // This prevents intrusive error screens during route transitions
+            console.log("TopBar: Session verification failed or backend unreachable.");
         } finally {
             setLoading(false);
         }
