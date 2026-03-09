@@ -107,6 +107,7 @@ interface WeeklyLog {
     supervisorName?: string;
     supervisorDate?: string;
     supervisorSignature?: boolean;
+    status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 }
 
 interface IapReport {
@@ -169,6 +170,7 @@ export default function StudentLogbookPage() {
             supervisorSignature: false,
             supervisorName: "",
             supervisorDate: "",
+            status: "DRAFT"
         };
 
         return existing ? { ...baseLog, ...existing } : baseLog;
@@ -204,9 +206,11 @@ export default function StudentLogbookPage() {
             try {
                 const studentData = await apiFetch(`/students/${studentId}`);
                 setStudent(studentData);
-            } catch (e) {
-                console.error("Error fetching student:", e);
-                toast.error("Failed to load profile details");
+            } catch (e: any) {
+                if (e.message !== 'Not Found' && e.message !== 'Student not found') {
+                    console.error("Error fetching student:", e);
+                    toast.error("Failed to load profile details");
+                } 
             }
 
             try {
@@ -303,6 +307,22 @@ export default function StudentLogbookPage() {
         }
     };
 
+    const handleSubmitWeeklyLog = async (logId: number) => {
+        setIsSaving(true);
+        try {
+            await apiFetch(`/weekly-logs/${logId}/status`, {
+                method: "PATCH",
+                body: JSON.stringify({ status: "SUBMITTED" })
+            });
+            toast.success("Logbook submitted to supervisor");
+            fetchData();
+        } catch (error) {
+            toast.error("Submission failed");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleSaveReport = async () => {
         setIsSaving(true);
         try {
@@ -354,11 +374,13 @@ export default function StudentLogbookPage() {
                 ['Email', student?.email || 'N/A'],
                 ['Phone', student?.phone || 'N/A'],
                 ['Internship Period', `${student?.internshipStart ? new Date(student.internshipStart).toLocaleDateString() : 'N/A'} - ${student?.internshipEnd ? new Date(student.internshipEnd).toLocaleDateString() : 'N/A'}`],
+                ['Final Assessment Score', student?.ratings?.[0]?.rating ? `${student.ratings[0].rating}%` : 'Pending']
             ],
             theme: 'grid',
             styles: { fillColor: [255, 255, 255], fontSize: 10, cellPadding: 5 },
             columnStyles: { 0: { fontStyle: 'bold', width: 50, fillColor: [240, 240, 240] } }
         });
+
 
         const y2 = (doc as any).lastAutoTable.finalY + 15;
         doc.text("Placement Information", 20, y2);
@@ -682,9 +704,9 @@ export default function StudentLogbookPage() {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <LogbookInput label="IAP Company Supervisor Name" value={student?.supervisorName} onChange={(v) => setStudent({ ...student, supervisorName: v })} />
                                             <LogbookInput label="Department" value={student?.supervisorDepartment} onChange={(v) => setStudent({ ...student, supervisorDepartment: v })} />
-                                            <LogbookInput label="Tel/Mob No." value={student?.supervisorPhone} onChange={(v) => setStudent({ ...student, supervisorPhone: v })} />
+                                            <LogbookInput label="Tel/Mob No. (Supervisor)" value={student?.supervisorPhone} onChange={(v) => setStudent({ ...student, supervisorPhone: v })} />
                                             <LogbookInput label="RCA Liaison Officer Name" value={student?.liaisonOfficerName} onChange={(v) => setStudent({ ...student, liaisonOfficerName: v })} />
-                                            <LogbookInput label="Tel/Mob No." value={student?.liaisonOfficerPhone} onChange={(v) => setStudent({ ...student, liaisonOfficerPhone: v })} />
+                                            <LogbookInput label="Tel/Mob No. (Liaison Officer)" value={student?.liaisonOfficerPhone} onChange={(v) => setStudent({ ...student, liaisonOfficerPhone: v })} />
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -716,9 +738,8 @@ export default function StudentLogbookPage() {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {Array.from({ length: 15 }).map((_, index) => {
-                                                    const weekNum = index + 1;
-                                                    const weekData = generatedWeeksList.find(w => w.number === weekNum);
+                                                {generatedWeeksList.map((weekData, index) => {
+                                                    const weekNum = weekData.number;
                                                     const log = weeklyLogs.find(l => l.weekNumber === weekNum);
 
                                                     const filledDaysCount = [
@@ -748,8 +769,12 @@ export default function StudentLogbookPage() {
                                                                 </div>
                                                             </td>
                                                             <td className="border border-slate-200 p-3 text-center">
-                                                                {log?.supervisorSignature ? (
-                                                                    <span className="text-xs font-bold text-green-600 uppercase tracking-widest px-2 py-1 bg-green-50 rounded">Signed</span>
+                                                                {log?.status === "APPROVED" || log?.supervisorSignature ? (
+                                                                    <span className="text-xs font-bold text-green-600 uppercase tracking-widest px-2 py-1 bg-green-50 rounded">Signed & Approved</span>
+                                                                ) : log?.status === "SUBMITTED" ? (
+                                                                    <span className="text-xs font-bold text-blue-600 uppercase tracking-widest px-2 py-1 bg-blue-50 rounded">Submitted</span>
+                                                                ) : log?.status === "REJECTED" ? (
+                                                                    <span className="text-xs font-bold text-red-600 uppercase tracking-widest px-2 py-1 bg-red-50 rounded">Rejected</span>
                                                                 ) : (
                                                                     <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Pending</span>
                                                                 )}
@@ -799,8 +824,18 @@ export default function StudentLogbookPage() {
                                                             <div className={`text-xs mt-1 ${isSelected ? 'text-white/70' : 'text-slate-500'}`}>
                                                                 {new Date(w.start).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - {new Date(w.end).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                                             </div>
+                                                            <div className="flex flex-col items-end gap-1">
+                                                                {isFilled && <CheckCircle2 className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-green-500'}`} />}
+                                                                {log?.status && log.status !== 'DRAFT' && (
+                                                                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${log.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                                                        log.status === 'SUBMITTED' ? 'bg-blue-100 text-blue-700' :
+                                                                            'bg-red-100 text-red-700'
+                                                                        }`}>
+                                                                        {log.status}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                        {isFilled && <CheckCircle2 className={`h-5 w-5 ${isSelected ? 'text-white' : 'text-green-500'}`} />}
                                                     </button>
                                                 );
                                             })}
@@ -842,14 +877,16 @@ export default function StudentLogbookPage() {
                                                                     {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map(day => {
                                                                         const dayKey = day.toLowerCase();
                                                                         const log = getSafeLog(expandedWeek);
+                                                                        const isLocked = log.status !== 'DRAFT';
 
                                                                         return (
                                                                             <tr key={day} className="hover:bg-slate-50/50 transition-colors">
                                                                                 <td className="p-4 font-medium text-slate-700">{day}</td>
                                                                                 <td className="p-4">
                                                                                     <textarea
-                                                                                        className="w-full bg-white border border-slate-200 rounded-lg p-3 text-sm text-slate-800 resize-none min-h-[80px] focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-400"
-                                                                                        placeholder={`Describe tasks performed on ${day}...`}
+                                                                                        disabled={isLocked}
+                                                                                        className={`w-full bg-white border border-slate-200 rounded-lg p-3 text-sm text-slate-800 resize-none min-h-[80px] focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-400 ${isLocked ? 'bg-slate-50 cursor-not-allowed opacity-75' : ''}`}
+                                                                                        placeholder={isLocked ? "Log is locked" : `Describe tasks performed on ${day}...`}
                                                                                         value={log[`${dayKey}Task`] || ""}
                                                                                         onChange={(e) => updateLogField(expandedWeek, `${dayKey}Task`, e.target.value)}
                                                                                     />
@@ -859,7 +896,8 @@ export default function StudentLogbookPage() {
                                                                                         type="number"
                                                                                         min="0"
                                                                                         max="24"
-                                                                                        className="w-full bg-white border border-slate-200 rounded-lg p-3 text-sm text-center text-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                                                                                        disabled={isLocked}
+                                                                                        className={`w-full bg-white border border-slate-200 rounded-lg p-3 text-sm text-center text-slate-800 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${isLocked ? 'bg-slate-50 cursor-not-allowed opacity-75' : ''}`}
                                                                                         value={log[`${dayKey}Hours`] || ""}
                                                                                         onChange={(e) => updateLogField(expandedWeek, `${dayKey}Hours`, parseFloat(e.target.value) || 0)}
                                                                                     />
@@ -887,7 +925,8 @@ export default function StudentLogbookPage() {
                                                                     <p className="text-xs text-slate-500 mt-1">Brief summary of the week&apos;s overall progress and learnings.</p>
                                                                 </div>
                                                                 <textarea
-                                                                    className="w-full h-32 bg-white border border-slate-200 rounded-lg p-4 text-sm text-slate-800 resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-400"
+                                                                    disabled={getSafeLog(expandedWeek).status !== 'DRAFT'}
+                                                                    className={`w-full h-32 bg-white border border-slate-200 rounded-lg p-4 text-sm text-slate-800 resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-400 ${getSafeLog(expandedWeek).status !== 'DRAFT' ? 'bg-slate-50 cursor-not-allowed opacity-75' : ''}`}
                                                                     placeholder="Summarize your week here..."
                                                                     value={getSafeLog(expandedWeek).generalStatement || ""}
                                                                     onChange={(e) => updateLogField(expandedWeek, 'generalStatement', e.target.value)}
@@ -903,9 +942,9 @@ export default function StudentLogbookPage() {
                                                                         <div className="space-y-2">
                                                                             <label className="text-xs font-semibold text-slate-500">Grade Awarded</label>
                                                                             <select
-                                                                                className="w-full h-10 border border-slate-200 rounded-md px-3 text-sm bg-white"
+                                                                                disabled={true}
+                                                                                className="w-full h-10 border border-slate-200 rounded-md px-3 text-sm bg-slate-100 cursor-not-allowed"
                                                                                 value={getSafeLog(expandedWeek).grade || ""}
-                                                                                onChange={(e) => updateLogField(expandedWeek, 'grade', e.target.value)}
                                                                             >
                                                                                 <option value="" disabled>Select A-E...</option>
                                                                                 <option value="A">A - Excellent</option>
@@ -919,26 +958,25 @@ export default function StudentLogbookPage() {
                                                                             <label className="text-xs font-semibold text-slate-500">Date</label>
                                                                             <input
                                                                                 type="date"
-                                                                                className="w-full h-10 border border-slate-200 rounded-md px-3 text-sm bg-white"
+                                                                                disabled={true}
+                                                                                className="w-full h-10 border border-slate-200 rounded-md px-3 text-sm bg-slate-100 cursor-not-allowed"
                                                                                 value={getSafeLog(expandedWeek).supervisorDate || ""}
-                                                                                onChange={(e) => updateLogField(expandedWeek, 'supervisorDate', e.target.value)}
                                                                             />
                                                                         </div>
                                                                         <div className="col-span-2 space-y-2">
                                                                             <label className="text-xs font-semibold text-slate-500">Supervisor Name</label>
                                                                             <input
                                                                                 type="text"
-                                                                                className="w-full h-10 border border-slate-200 rounded-md px-3 text-sm bg-white placeholder:text-slate-300"
-                                                                                placeholder="Print Name"
+                                                                                disabled={true}
+                                                                                className="w-full h-10 border border-slate-200 rounded-md px-3 text-sm bg-slate-100 cursor-not-allowed"
                                                                                 value={getSafeLog(expandedWeek).supervisorName || ""}
-                                                                                onChange={(e) => updateLogField(expandedWeek, 'supervisorName', e.target.value)}
                                                                             />
                                                                         </div>
                                                                         <div className="col-span-2 flex items-center justify-between mt-2 pt-4 border-t border-slate-200">
                                                                             <label className="text-sm font-semibold text-slate-700">Digital Signature</label>
                                                                             <button
-                                                                                onClick={() => updateLogField(expandedWeek, 'supervisorSignature', !getSafeLog(expandedWeek).supervisorSignature)}
-                                                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${getSafeLog(expandedWeek).supervisorSignature ? 'bg-green-500' : 'bg-slate-200'}`}
+                                                                                disabled={true}
+                                                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-not-allowed ${getSafeLog(expandedWeek).supervisorSignature ? 'bg-green-500' : 'bg-slate-200'}`}
                                                                             >
                                                                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${getSafeLog(expandedWeek).supervisorSignature ? 'translate-x-6' : 'translate-x-1'}`} />
                                                                             </button>
@@ -949,14 +987,35 @@ export default function StudentLogbookPage() {
                                                         </div>
 
                                                         {/* Actions */}
-                                                        <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-end">
-                                                            <Button
-                                                                onClick={() => handleSaveWeeklyLog(getSafeLog(expandedWeek))}
-                                                                disabled={isSaving}
-                                                                className="h-12 px-8 rounded-lg bg-primary text-white font-bold shadow-sm"
-                                                            >
-                                                                {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : "Save Weekly Log"}
-                                                            </Button>
+                                                        <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-end gap-4">
+                                                            {getSafeLog(expandedWeek).status === 'DRAFT' ? (
+                                                                <>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        onClick={() => handleSaveWeeklyLog(getSafeLog(expandedWeek))}
+                                                                        disabled={isSaving}
+                                                                        className="h-12 px-8 rounded-lg border-primary text-primary hover:bg-primary/5 font-bold"
+                                                                    >
+                                                                        Save Draft
+                                                                    </Button>
+                                                                    <Button
+                                                                        onClick={() => {
+                                                                            const log = getSafeLog(expandedWeek);
+                                                                            if (log.id) handleSubmitWeeklyLog(log.id);
+                                                                            else toast.error("Please save the log as draft first");
+                                                                        }}
+                                                                        disabled={isSaving}
+                                                                        className="h-12 px-8 rounded-lg bg-primary text-white font-bold shadow-sm"
+                                                                    >
+                                                                        {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <><CheckCircle2 className="h-4 w-4 mr-2" /> Submit for Review</>}
+                                                                    </Button>
+                                                                </>
+                                                            ) : (
+                                                                <div className="flex items-center gap-2 text-slate-500 font-bold">
+                                                                    <LockKeyhole className="h-5 w-5" />
+                                                                    Log is {getSafeLog(expandedWeek).status}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </CardContent>
                                                 </Card>
@@ -1040,8 +1099,8 @@ export default function StudentLogbookPage() {
                                             <p className="text-slate-500 text-sm mt-1">Protected supervisor evaluations and final grading</p>
                                         </div>
                                         <div className="h-20 w-24 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center shadow-sm">
-                                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Grade</span>
-                                            <span className="text-3xl font-black text-primary">{student?.grade || "—"}</span>
+                                            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Score</span>
+                                            <span className="text-3xl font-black text-primary">{student?.ratings?.[0]?.rating ? `${student.ratings[0].rating}%` : "—"}</span>
                                         </div>
                                     </div>
                                 </CardHeader>

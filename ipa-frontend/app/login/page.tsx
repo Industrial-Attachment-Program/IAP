@@ -37,41 +37,26 @@ export default function LoginPage() {
                 localStorage.setItem("user", JSON.stringify(user));
                 localStorage.setItem("token", data.token || "");
 
-<<<<<<< HEAD
-                if (user.studentProfile?.id) {
-                    localStorage.setItem("studentProfileId", String(user.studentProfile.id));
-                }
-
-                const { role } = user;
-                const studentProfileId = user.studentProfile?.id;
-                const profileCompleted = user.profileCompleted || user.studentProfile?.profileCompleted;
-=======
                 const { role, profileCompleted, id, studentId, supervisorId } = user;
->>>>>>> 8575b888cc5d4cb8055c650ae03f00c7033e79bf
 
                 if (role === "ADMIN") {
                     router.push("/admin");
                 } else if (role === "SUPERVISOR") {
-<<<<<<< HEAD
-                    router.push(`/supervisor?supervisorId=${user.id}`);
-=======
                     const sid = supervisorId || user.supervisorProfile?.id || id;
                     router.push(`/supervisor/${sid}`);
->>>>>>> 8575b888cc5d4cb8055c650ae03f00c7033e79bf
                 } else if (role === "STUDENT") {
                     const sid = studentId || user.studentProfile?.id || id;
-                    // Always ensure we have a profile ID to redirect to
                     if (!sid) {
                         setError("Student profile not found. Please contact admin.");
                         return;
                     }
 
-                    if (profileCompleted) {
-<<<<<<< HEAD
-                        router.push(`/student/${studentProfileId}`);
-=======
+                    if (user.studentProfile?.id) {
+                        localStorage.setItem("studentProfileId", String(user.studentProfile.id));
+                    }
+
+                    if (profileCompleted || user.studentProfile?.profileCompleted) {
                         router.push(`/student/${sid}`);
->>>>>>> 8575b888cc5d4cb8055c650ae03f00c7033e79bf
                     } else {
                         router.push(`/complete-profile?token=login_${sid}`);
                     }
@@ -88,9 +73,7 @@ export default function LoginPage() {
 
     return (
         <div className="min-h-screen flex">
-            {/* ─── LEFT PANEL – Hero Image ─── */}
             <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden">
-                {/* Background image */}
                 <img
                     src="/login-hero.jpg"
                     alt="RCA Campus"

@@ -97,7 +97,7 @@ export class TasksService {
             updateData.completedAt = new Date();
         }
 
-        if (status === 'IN_PROGRESS' || status === 'SUBMITTED') {
+        if (status === 'SUBMITTED') {
             updateData.submittedAt = new Date();
         }
 
@@ -116,14 +116,25 @@ export class TasksService {
         });
 
         // Notifications
-        if (status === 'IN_PROGRESS' && task.student?.supervisor?.user?.id) {
+        if (status === 'SUBMITTED' && task.student?.supervisor?.user?.id) {
             await this.prisma.notification.create({
                 data: {
                     userId: task.student.supervisor.user.id,
-                    title: "Task Submission",
+                    title: "Task Submitted",
                     message: `${task.student.user.name} has submitted work for "${task.title}"`,
                     type: "TASK",
-                    link: `/supervisor/${task.student.supervisor.id}?tab=tasks`
+                    link: `/supervisor/${task.student.supervisor.id}`
+                }
+            });
+        } else if (status === 'IN_PROGRESS' && task.student?.supervisor?.user?.id) {
+            // Optional progress notification
+            await this.prisma.notification.create({
+                data: {
+                    userId: task.student.supervisor.user.id,
+                    title: "Task in Progress",
+                    message: `${task.student.user.name} started working on "${task.title}"`,
+                    type: "TASK",
+                    link: `/supervisor/${task.student.supervisor.id}`
                 }
             });
         } else if ((status === 'COMPLETED' || status === 'PENDING') && task.student?.user?.id) {

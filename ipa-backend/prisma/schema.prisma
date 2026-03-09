@@ -23,6 +23,7 @@ model User {
   lastAttemptAt        DateTime?
   tokenVersion         Int            @default(0)
   studentProfile       Student?
+  liaisonProfile       LiaisonOfficer?
   receivedMessages     Message[]      @relation("ReceivedMessages")
   sentMessages         Message[]      @relation("SentMessages")
   notifications        Notification[]
@@ -63,8 +64,10 @@ model Student {
   internshipStart       DateTime?
   internshipEnd         DateTime?
   supervisorId          Int
-  supervisor            Supervisor  @relation(fields: [supervisorId], references: [id])
-  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  liaisonId             Int?
+  supervisor            Supervisor      @relation(fields: [supervisorId], references: [id])
+  liaison               LiaisonOfficer? @relation(fields: [liaisonId], references: [id])
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   iapReport             IapReport?
   logEntries            LogEntry[]
   ratings               Rating[]
@@ -84,6 +87,19 @@ model Supervisor {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("supervisors")
+}
+
+model LiaisonOfficer {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @unique
+  phone      String?
+  department String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  students   Student[]
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("liaison_officers")
 }
 
 model Task {
@@ -129,6 +145,9 @@ model WeeklyLog {
   supervisorName      String?
   supervisorDate      DateTime?
   supervisorNote      String?
+  liaisonSignature    Boolean         @default(false)
+  liaisonName         String?
+  liaisonDate         DateTime?
   approvedAt          DateTime?
   status              WeeklyLogStatus @default(DRAFT)
   dailyEntries        LogEntry[]
@@ -207,17 +226,24 @@ model Notification {
 }
 
 model IapReport {
-  id                    Int      @id @default(autoincrement())
-  studentId             Int      @unique
-  loVisitCount          Int?
-  isUseful              Boolean?
-  improvedUnderstanding Boolean?
-  providedExperiences   Boolean?
-  programmeTypes        String[]
-  otherProgrammeDetails String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  student               Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id                      Int      @id @default(autoincrement())
+  studentId               Int      @unique
+  loVisitCount            Int?
+  isUseful                Boolean?
+  improvedUnderstanding   Boolean?
+  providedExperiences     Boolean?
+  programmeTypes          String[]
+  otherProgrammeDetails   String?
+  satisfactionIndustry    String?
+  satisfactionMajor       String?
+  satisfactionPractical   String?
+  satisfactionInstructors String?
+  notableAchievements     String?
+  futureCareerPlan        String?
+  suggestions             String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  student                 Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("iap_reports")
 }
@@ -226,6 +252,7 @@ enum UserRole {
   ADMIN
   SUPERVISOR
   STUDENT
+  LIAISON
 }
 
 enum TaskStatus {

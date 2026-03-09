@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
 
 export default function MainLayout({
     children,
@@ -15,9 +16,10 @@ export default function MainLayout({
     const [userId, setUserId] = useState<number | null>(null);
     const [mounted, setMounted] = useState(false);
 
-    let role: "admin" | "supervisor" | "student" = "student";
+    let role: "admin" | "supervisor" | "student" | "liaison" = "student";
     if (pathname.startsWith("/admin")) role = "admin";
     else if (pathname.startsWith("/supervisor")) role = "supervisor";
+    else if (pathname.startsWith("/liaison")) role = "liaison";
     else if (pathname.startsWith("/student")) role = "student";
 
     useEffect(() => {
@@ -33,12 +35,15 @@ export default function MainLayout({
             const user = JSON.parse(storedUser);
             const userRole = user.role?.toLowerCase();
 
-            // Role mismatch → always go to login, never the landing page
             if (pathname.startsWith("/admin") && userRole !== "admin") {
                 router.push("/login");
                 return;
             }
             if (pathname.startsWith("/supervisor") && userRole !== "supervisor") {
+                router.push("/login");
+                return;
+            }
+            if (pathname.startsWith("/liaison") && userRole !== "liaison") {
                 router.push("/login");
                 return;
             }
@@ -49,13 +54,15 @@ export default function MainLayout({
 
             setUserId(user.id);
             setMounted(true);
+
+            apiFetch('/auth/me').catch(() => {});
+
         } catch (e) {
             console.error("Auth hydration failed", e);
             router.push("/login");
         }
     }, [pathname, router]);
 
-    // Simple loading state or empty shell during SSR to prevent hydration issues
     if (!mounted) return <div className="min-h-screen bg-background" />;
 
     return (

@@ -19,6 +19,7 @@ export class AuthService {
       include: {
         studentProfile: true,
         supervisorProfile: true,
+        liaisonProfile: true,
       },
     });
 
@@ -89,7 +90,7 @@ export class AuthService {
         tokenVersion: user.tokenVersion
       },
       this.JWT_SECRET,
-      { expiresIn: '3d' },
+      { expiresIn: '1d' },
     );
 
     const userResponse: any = {
@@ -113,6 +114,11 @@ export class AuthService {
       userResponse.supervisorProfile = {
         id: user.supervisorProfile.id,
       };
+    } else if (user.role === 'LIAISON' && user.liaisonProfile) {
+      userResponse.liaisonId = user.liaisonProfile.id;
+      userResponse.liaisonProfile = {
+        id: user.liaisonProfile.id,
+      };
     }
 
     return {
@@ -128,6 +134,7 @@ export class AuthService {
       include: {
         studentProfile: true,
         supervisorProfile: true,
+        liaisonProfile: true,
       }
     });
     return user;
@@ -136,12 +143,11 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
-      // To prevent email enumeration, we return success even if user doesn't exist
       return { message: 'If an account exists with that email, a reset link has been sent.' };
     }
 
     const token = generateToken(64);
-    const expires = new Date(Date.now() + 3600 * 1000); // 1 hour
+    const expires = new Date(Date.now() + 3600 * 1000);
 
     await this.prisma.user.update({
       where: { id: user.id },

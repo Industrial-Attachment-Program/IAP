@@ -59,6 +59,21 @@ h6 {
 }
 
 .hide-scrollbar {
-  -ms-overflow-style: none; 
-  scrollbar-width: none;  
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+
+button,
+[role="button"],
+a,
+label[for],
+select,
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"],
+input[type="submit"],
+input[type="reset"],
+summary {
+  cursor: pointer;
 }

@@ -26,14 +26,19 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.error || errorData.message || "An error occurred";
+            const errorMessage = Array.isArray(errorData.message)
+                ? errorData.message[0]
+                : errorData.message || errorData.error || "An error occurred";
 
-            // Handle Unauthorized globally
+            // Handle Unauthorized gracefully
             if (response.status === 401) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-                    window.location.href = '/login';
+                // Only destroy session if explicit auth check failed
+                if (endpoint === '/auth/me') {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+                        window.location.href = '/login';
+                    }
                 }
             }
 

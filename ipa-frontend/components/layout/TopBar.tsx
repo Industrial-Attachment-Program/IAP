@@ -11,7 +11,7 @@ interface User {
 }
 
 interface TopBarProps {
-    role: "admin" | "supervisor" | "student";
+    role: "admin" | "supervisor" | "student" | "liaison";
     userId: number | null;
 }
 
@@ -65,6 +65,7 @@ export function TopBar({ role, userId }: TopBarProps) {
             case "admin": return "Admin";
             case "supervisor": return "Supervisor";
             case "student": return "Student";
+            case "liaison": return "Liaison Officer";
             default: return "User";
         }
     };

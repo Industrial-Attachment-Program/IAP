@@ -21,9 +21,24 @@ export class WeeklyLogsController {
     constructor(private readonly weeklyLogsService: WeeklyLogsService) { }
 
     @Get()
-    async findAll(@Query('studentId', ParseIntPipe) studentId: number) {
-        const logs = await this.weeklyLogsService.findByStudent(studentId);
-        return { logs };
+    async findAll(
+        @Query('studentId') studentId?: string,
+        @Query('supervisorId') supervisorId?: string,
+        @Query('liaisonId') liaisonId?: string,
+    ) {
+        if (studentId) {
+            const logs = await this.weeklyLogsService.findByStudent(parseInt(studentId));
+            return { logs };
+        }
+        if (supervisorId) {
+            const logs = await this.weeklyLogsService.findBySupervisor(parseInt(supervisorId));
+            return { logs };
+        }
+        if (liaisonId) {
+            const logs = await this.weeklyLogsService.findByLiaison(parseInt(liaisonId));
+            return { logs };
+        }
+        return { logs: [] };
     }
 
     @Get(':id')
@@ -32,19 +47,25 @@ export class WeeklyLogsController {
     }
 
     @Post()
-    async create(@Body() body: { studentId: number; date?: string }) {
-        const date = body.date ? new Date(body.date) : new Date();
-        return this.weeklyLogsService.findOrCreateWeek(body.studentId, date);
+    async createOrUpdate(@Body() body: any) {
+        // If it's just generating an empty week (only studentId & date)
+        if (Object.keys(body).length === 2 && body.studentId && body.date) {
+            const date = body.date ? new Date(body.date) : new Date();
+            return this.weeklyLogsService.findOrCreateWeek(body.studentId, date);
+        }
+        // Otherwise save the actual content
+        return this.weeklyLogsService.upsert(body);
     }
 
-    @Patch(':id/submit')
-    async submit(
+    @Patch(':id/status')
+    async updateStatus(
         @Param('id', ParseIntPipe) id: number,
-        @Body() body: { summary: string; objectives: string },
+        @Body() body: { status: 'SUBMITTED' },
     ) {
-        return this.weeklyLogsService.submitWeek(id, {
-            generalStatement: `${body.summary} ${body.objectives}`,
-        });
+        if (body.status === 'SUBMITTED') {
+            return this.weeklyLogsService.submitWeek(id, { generalStatement: '' }); // Uses existing submit function in service to trigger notifications
+        }
+        return this.weeklyLogsService.findOne(id);
     }
 
     @Patch(':id/approve')
@@ -52,10 +73,10 @@ export class WeeklyLogsController {
     @Roles('SUPERVISOR')
     async approve(
         @Param('id', ParseIntPipe) id: number,
-        @Body() body: { note?: string },
+        @Body() body: any,
         @Request() req: any,
     ) {
-        return this.weeklyLogsService.approveWeek(id, req.user.id, body.note);
+        return this.weeklyLogsService.approveWeek(id, req.user.userId, body);
     }
 
     @Patch(':id/reject')
@@ -66,6 +87,17 @@ export class WeeklyLogsController {
         @Body() body: { note: string },
         @Request() req: any,
     ) {
-        return this.weeklyLogsService.rejectWeek(id, req.user.id, body.note);
+        return this.weeklyLogsService.rejectWeek(id, req.user.userId, body.note);
+    }
+
+    @Patch(':id/verify-liaison')
+    @UseGuards(RolesGuard)
+    @Roles('LIAISON')
+    async verifyLiaison(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() body: any,
+        @Request() req: any,
+    ) {
+        return this.weeklyLogsService.verifyLiaison(id, req.user.userId, body);
     }
 }

@@ -11,7 +11,7 @@ export class StudentsService {
     constructor(private prisma: PrismaService) { }
 
     async findAll(query: any) {
-        const { id, supervisorId, limit: limitParam, offset: offsetParam } = query;
+        const { id, supervisorId, liaisonId, limit: limitParam, offset: offsetParam } = query;
 
         if (id) {
             const studentId = Number(id);
@@ -26,6 +26,7 @@ export class StudentsService {
                         select: { id: true, name: true, email: true },
                     },
                     supervisor: { include: { user: true } },
+                    liaison: { include: { user: true } },
                 },
             });
 
@@ -38,7 +39,10 @@ export class StudentsService {
 
         const limit = parseInt(limitParam || '1000');
         const offset = parseInt(offsetParam || '0');
-        const whereClause = supervisorId ? { supervisorId: Number(supervisorId) } : {};
+
+        let whereClause: any = {};
+        if (supervisorId) whereClause.supervisorId = Number(supervisorId);
+        if (liaisonId) whereClause.liaisonId = Number(liaisonId);
 
         const students = await this.prisma.student.findMany({
             where: whereClause,
@@ -47,6 +51,7 @@ export class StudentsService {
             include: {
                 user: { select: { id: true, name: true, email: true } },
                 supervisor: { include: { user: true } },
+                liaison: { include: { user: true } },
             },
             orderBy: { createdAt: 'desc' },
         });
@@ -62,6 +67,8 @@ export class StudentsService {
                     select: { id: true, name: true, email: true },
                 },
                 supervisor: { include: { user: true } },
+                liaison: { include: { user: true } },
+                ratings: true,
             },
         });
 

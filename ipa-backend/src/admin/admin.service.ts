@@ -13,6 +13,7 @@ export class AdminService {
             include: {
                 studentProfile: true,
                 supervisorProfile: true,
+                liaisonProfile: true,
             },
             orderBy: { createdAt: 'desc' },
         });
@@ -94,6 +95,14 @@ export class AdminService {
                 isActive: true,
                 ...(role === 'SUPERVISOR' ? {
                     supervisorProfile: {
+                        create: {
+                            phone,
+                            department,
+                        },
+                    },
+                } : {}),
+                ...(role === 'LIAISON' ? {
+                    liaisonProfile: {
                         create: {
                             phone,
                             department,

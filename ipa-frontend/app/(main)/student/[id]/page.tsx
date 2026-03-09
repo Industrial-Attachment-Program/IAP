@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { Card, CardContent } from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, ChevronDown, ChevronUp, CheckCircle2, Circle, Upload, X, Users, Mail, Phone, MessageSquare } from "lucide-react";
+import { Clock,  CheckCircle2, Upload, X, Users, ArrowRight, Settings, Check, FileText } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+import toast from "react-hot-toast";
 
 
 interface Task {
@@ -20,15 +22,16 @@ interface Task {
     estimatedHours?: number;
 }
 
-
 export default function StudentDashboard() {
     const params = useParams();
     const router = useRouter();
     const studentId = Number(params.id);
 
-    const [isAuthChecking, setIsAuthChecking] = useState(true);
+    const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
     const [tasks, setTasks] = useState<Task[]>([]);
+    const [weeklyLogs, setWeeklyLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isFetching, setIsFetching] = useState(true);
     const [studentName, setStudentName] = useState<string | null>(null);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [showTaskForm, setShowTaskForm] = useState(false);
@@ -52,40 +55,41 @@ export default function StudentDashboard() {
             return;
         }
 
-        setIsAuthChecking(false);
-        fetchStudent();
+        const storedUser = localStorage.getItem("user");
+        const token = localStorage.getItem("token");
+
+        if (!storedUser || !token) {
+            router.replace("/login");
+            return;
+        }
+
+        try {
+            const user = JSON.parse(storedUser);
+            if (user.role === "STUDENT" && user.studentProfile?.id !== studentId) {
+                router.replace("/login");
+                return;
+            }
+            if (user.role !== "STUDENT" && user.role !== "ADMIN") {
+                router.replace("/login");
+                return;
+            }
+
+            // If we reach here, user is valid for this page
+            setIsAuthorized(true);
+            fetchStudent();
+        } catch (e) {
+            router.replace("/login");
+            return;
+        }
     }, [studentId, router]);
 
     const fetchStudent = async () => {
         try {
             const data = await apiFetch(`/students?id=${studentId}`);
-            // Backend findAll returns { student: {...} } when id is provided
             const s = data.student;
             if (s) {
-                // IMPORTANT: Only after we confirm the student exists, 
-                // we check if the current user is logged in and has permission.
-                const storedUser = localStorage.getItem("user");
-                const token = localStorage.getItem("token");
-
-                if (!storedUser || !token) {
-                    router.replace("/login");
-                    return;
-                }
-
-                try {
-                    const user = JSON.parse(storedUser);
-                    if (user.role === "STUDENT" && user.studentProfile?.id !== studentId) {
-                        router.replace(`/student/${user.studentProfile?.id}`);
-                        return;
-                    }
-                } catch (e) {
-                    console.error("Error parsing user data", e);
-                    router.replace("/login");
-                    return;
-                }
-
-                // If we reach here, user is logged in and permitted
                 fetchTasks();
+                fetchWeeklyLogs();
 
                 if (s.user?.name) {
                     setStudentName(s.user.name);
@@ -108,13 +112,12 @@ export default function StudentDashboard() {
                     });
                 }
             } else {
-                router.replace('/not-found');
+                toast.error("Profile not found");
             }
         } catch (error: any) {
             if (error.message !== 'Not Found' && error.message !== 'Student not found') {
                 console.error("Error fetching student:", error);
             }
-            router.replace('/not-found');
         }
     };
 
@@ -139,16 +142,62 @@ export default function StudentDashboard() {
             console.error("Error fetching tasks:", error);
         } finally {
             setLoading(false);
+            setIsFetching(false);
+        }
+    };
+
+    const fetchWeeklyLogs = async () => {
+        try {
+            const data = await apiFetch(`/weekly-logs?studentId=${studentId}`);
+            setWeeklyLogs(data.logs || []);
+        } catch (error) {
+            console.error("Error fetching weekly logs:", error);
         }
     };
 
 
-    if (isAuthChecking) {
+    if (isAuthorized === null) {
+        return <div className="min-h-screen bg-background" />;
+    }
+
+    if (isFetching) {
         return (
-            <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
-                <div className="animate-pulse flex flex-col items-center gap-4">
-                    <div className="h-10 w-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                    <p className="text-primary font-bold text-sm">Verifying access...</p>
+            <div className="space-y-8 animate-pulse">
+                {/* Header skeleton */}
+                <div className="flex flex-col md:flex-row gap-6">
+                    <div className="flex-1 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
+                        <div className="space-y-3">
+                            <div className="h-8 w-56 bg-slate-200 rounded-xl" />
+                            <div className="h-4 w-80 bg-slate-100 rounded-lg" />
+                        </div>
+                        <div className="hidden md:flex gap-3">
+                            <div className="h-12 w-32 bg-slate-100 rounded-xl" />
+                            <div className="h-12 w-40 bg-slate-100 rounded-xl" />
+                        </div>
+                    </div>
+                </div>
+                {/* Stats cards skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
+                            <div className="space-y-2">
+                                <div className="h-3 w-20 bg-slate-200 rounded-full" />
+                                <div className="h-6 w-12 bg-slate-200 rounded-lg" />
+                            </div>
+                            <div className="h-14 w-14 bg-slate-100 rounded-2xl" />
+                        </div>
+                    ))}
+                </div>
+                {/* Task board skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {Array.from({ length: 3 }).map((_, col) => (
+                        <div key={col} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
+                            <div className="h-5 w-28 bg-slate-200 rounded-full" />
+                            {Array.from({ length: 3 }).map((_, row) => (
+                                <div key={row} className="h-20 w-full bg-slate-100 rounded-2xl" />
+                            ))}
+                        </div>
+                    ))}
                 </div>
             </div>
         );
@@ -160,156 +209,134 @@ export default function StudentDashboard() {
         done: tasks.filter(t => t.status === "COMPLETED"),
     };
 
+    const totalHoursWorked = weeklyLogs.reduce((acc, log) => acc + (log.totalHours || 0), 0);
+
     return (
-        <div className="flex gap-6 h-[calc(100vh-8rem)]">
-            <div className="flex-1 flex flex-col gap-6 overflow-hidden">
-                <div className="flex items-center justify-between bg-white p-6 rounded-xl border border-neutral/10 shadow-sm">
-                    <div>
-                        <h1 className="text-2xl font-bold text-primary">
-                            Hi {studentName || "there"}!
+        <div className="space-y-8">
+            <div className="flex flex-col md:flex-row gap-6">
+                <div className="flex-1 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between group hover:shadow-md transition-all">
+                    <div className="space-y-1">
+                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight leading-tight">
+                            Hello, {studentName?.split(" ")[0] || "Student"}!
                         </h1>
-                        <p className="text-primary">Ready to log your progress for today?</p>
+                        <p className="text-slate-500 font-normal">Here's what's happening with your internship today.</p>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <Button variant="outline" size="sm" onClick={() => setShowProfileModal(true)} className="text-white bg-primary p-3 hover:bg-primary/80 transition-all duration-300 transform hover:scale-105 border-0 font-bold uppercase tracking-wider text-[10px] shadow-lg shadow-primary/20">Update Profile</Button>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="date"
-                                value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
-                                className="px-2 py-2 rounded-full border border-primary/20 bg-white text-primary text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-x-auto">
-                    {/* Tasks Columns */}
-                    <div className="flex gap-6 h-full min-w-[900px]">
-                        <div className="flex-1 flex flex-col gap-4 bg-neutral/5 p-4 rounded-xl border border-neutral/10">
-                            <div className="flex items-center justify-between mb-2">
-                                <h3 className="font-semibold text-primary flex items-center gap-2">
-                                    <Circle className="h-4 w-4 text-primary" />
-                                    To Do
-                                </h3>
-                                <span className="bg-white px-2 py-1 rounded text-xs font-bold text-primary shadow-sm border border-primary/20">{tasksByStatus.todo.length}</span>
-                            </div>
-
-                            {loading ? (
-                                <div className="text-center text-primary py-8">Loading...</div>
-                            ) : tasksByStatus.todo.length === 0 ? (
-                                <div className="text-center text-primary py-8 text-sm">No pending tasks</div>
-                            ) : (
-                                <div className="space-y-4 overflow-y-auto pr-2 max-h-[500px]">
-                                    {tasksByStatus.todo.map((task: any) => (
-                                        <Card key={task.id} className="cursor-pointer hover:border-primary/50 transition-colors group">
-                                            <CardContent className="p-4">
-                                                <h4 className="font-semibold text-primary mb-1">{task.title}</h4>
-                                                <p className="text-xs text-primary mb-3">{task.description}</p>
-                                                <div className="flex items-center justify-between text-xs text-primary mb-3">
-                                                    <div className="flex items-center gap-1">
-                                                        <Clock className="h-3 w-3" />
-                                                        <span>{new Date(task.date).toLocaleDateString()}</span>
-                                                    </div>
-                                                </div>
-                                                <Button
-                                                    size="sm"
-                                                    className="w-full text-xs"
-                                                    onClick={() => {
-                                                        setTaskSubmission({ taskId: task.id, description: "", attachments: "" });
-                                                        setShowTaskForm(true);
-                                                    }}
-                                                >
-                                                    <Upload className="h-3 w-3 mr-1" />
-                                                    Submit Work
-                                                </Button>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex-1 flex flex-col gap-4 bg-neutral/5 p-4 rounded-xl border border-neutral/10">
-                            <div className="flex items-center justify-between mb-2">
-                                <h3 className="font-semibold text-primary flex items-center gap-2">
-                                    <Clock className="h-4 w-4 text-primary" />
-                                    In Progress
-                                </h3>
-                                <span className="bg-white px-2 py-1 rounded text-xs font-bold text-primary shadow-sm border border-primary/20">{tasksByStatus.inProgress.length}</span>
-                            </div>
-
-                            {loading ? (
-                                <div className="text-center text-primary py-8">Loading...</div>
-                            ) : tasksByStatus.inProgress.length === 0 ? (
-                                <div className="text-center text-primary py-8 text-sm">No tasks in progress</div>
-                            ) : (
-                                <div className="space-y-4 overflow-y-auto pr-2 max-h-[500px]">
-                                    {tasksByStatus.inProgress.map((task: any) => (
-                                        <Card key={task.id} className="cursor-pointer border-l-4 border-l-primary shadow-md">
-                                            <CardContent className="p-4">
-                                                <h4 className="font-semibold text-primary mb-1">{task.title}</h4>
-                                                <p className="text-xs text-primary mb-3">{task.description}</p>
-                                                <div className="flex items-center justify-between text-xs text-primary mb-3">
-                                                    <div className="flex items-center gap-1">
-                                                        <Clock className="h-3 w-3" />
-                                                        <span>{new Date(task.date).toLocaleDateString()}</span>
-                                                    </div>
-                                                </div>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="w-full text-xs"
-                                                    onClick={() => {
-                                                        setTaskSubmission({ taskId: task.id, description: "", attachments: "" });
-                                                        setShowTaskForm(true);
-                                                    }}
-                                                >
-                                                    <Upload className="h-3 w-3 mr-1" />
-                                                    Update Submission
-                                                </Button>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex-1 flex flex-col gap-4 bg-neutral/5 p-4 rounded-xl border border-neutral/10">
-                            <div className="flex items-center justify-between mb-2">
-                                <h3 className="font-semibold text-primary flex items-center gap-2">
-                                    <CheckCircle2 className="h-4 w-4 text-primary" />
-                                    Done
-                                </h3>
-                                <span className="bg-white px-2 py-1 rounded text-xs font-bold text-primary shadow-sm border border-primary/20">{tasksByStatus.done.length}</span>
-                            </div>
-
-                            {loading ? (
-                                <div className="text-center text-primary py-8">Loading...</div>
-                            ) : tasksByStatus.done.length === 0 ? (
-                                <div className="text-center text-primary py-8 text-sm">No completed tasks</div>
-                            ) : (
-                                <div className="space-y-4 overflow-y-auto pr-2 max-h-[500px]">
-                                    {tasksByStatus.done.map((task: any) => (
-                                        <Card key={task.id} className="cursor-pointer opacity-75 hover:opacity-100 transition-opacity border-l-4 border-l-primary">
-                                            <CardContent className="p-4">
-                                                <h4 className="font-semibold text-primary mb-1">{task.title}</h4>
-                                                <p className="text-xs text-primary mb-3">{task.description}</p>
-                                                <div className="flex items-center justify-between text-xs text-primary">
-                                                    <div className="flex items-center gap-1">
-                                                        <CheckCircle2 className="h-3 w-3 text-primary" />
-                                                        <span>Completed</span>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                    <div className="hidden md:flex items-center gap-3">
+                        <Button
+                            variant="outline"
+                            className="h-12 px-6 rounded-xl font-medeium border-slate-200 text-slate-600 hover:bg-slate-50"
+                            onClick={() => setShowProfileModal(true)}
+                        >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Edit Profile
+                        </Button>
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            className="h-12 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-sm"
+                        />
                     </div>
                 </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                    { label: "Active Tasks", value: tasks.filter(t => t.status !== "COMPLETED").length, icon: CheckCircle2, color: "text-blue-600", bg: "bg-blue-50" },
+                    { label: "Completed", value: tasks.filter(t => t.status === "COMPLETED").length, icon: Check, color: "text-emerald-600", bg: "bg-emerald-50" },
+                    { label: "Hours worked", value: `${totalHoursWorked}h`, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
+                    { label: "Supervisor", value: supervisorInfo?.name || "Assigned", icon: Users, color: "text-indigo-600", bg: "bg-indigo-50" },
+                ].map((stat, i) => (
+                    <Card key={i} className="border-none shadow-sm rounded-3xl bg-white transition-all hover:translate-y-[-2px]">
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <p className="text-md font-semibold text-slate-400">{stat.label}</p>
+                                    <p className="text-lg font-semibold text-slate-900">{stat.value}</p>
+                                </div>
+                                <div className={cn("p-4 rounded-2xl", stat.bg)}>
+                                    <stat.icon className={cn("h-6 w-6", stat.color)} />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <Card className="lg:col-span-2 border-none shadow-sm rounded-[32px] bg-white overflow-hidden">
+                    <CardHeader className="p-8 pb-0 flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle className="text-xl font-bold text-slate-900">Recent Assignments</CardTitle>
+                            <CardDescription className="text-slate-500">Latest tasks needing your attention</CardDescription>
+                        </div>
+                        <Button variant="ghost" className="text-primary font-bold" onClick={() => router.push('/student/tasks')}>View All Tasks <ArrowRight className="h-4 w-4 ml-1" /></Button>
+                    </CardHeader>
+                    <CardContent className="p-8 pt-6">
+                        <div className="space-y-4">
+                            {tasks.filter(t => t.status !== 'COMPLETED').slice(0, 3).length === 0 ? (
+                                <div className="py-12 text-center text-slate-400 border-2 border-dashed border-slate-100 rounded-[24px]">No pending tasks</div>
+                            ) : (
+                                tasks.filter(t => t.status !== 'COMPLETED').slice(0, 3).map(task => (
+                                    <div key={task.id} className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 hover:bg-slate-100/50 transition-colors group cursor-pointer" onClick={() => router.push('/student/tasks')}>
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shadow-sm text-primary">
+                                                <FileText className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-900 text-sm">{task.title}</p>
+                                                <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{task.description}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-lg border border-amber-100">{task.status}</span>
+                                            <ArrowRight className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors" />
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-sm rounded-[32px] bg-white overflow-hidden flex flex-col">
+                    <CardHeader className="p-8 pb-4">
+                        <CardTitle className="text-xl font-bold text-slate-900">Quick Actions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-8 pt-0 flex-1 flex flex-col gap-3">
+                        <Button
+                            className="w-full h-16 rounded-2xl bg-primary text-white font-bold text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all justify-start px-6 gap-4"
+                            onClick={() => router.push('/student/logbook')}
+                        >
+                            <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center">
+                                <FileText className="h-4 w-4" />
+                            </div>
+                            Update Daily Logbook
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="w-full h-16 rounded-2xl border-2 border-slate-100 bg-white text-slate-700 font-bold text-sm hover:border-primary/20 hover:bg-slate-50 transition-all justify-start px-6 gap-4"
+                            onClick={() => router.push('/student/tasks')}
+                        >
+                            <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center text-primary">
+                                <CheckCircle2 className="h-4 w-4" />
+                            </div>
+                            Browse Assignment Board
+                        </Button>
+
+                        <div className="mt-auto pt-6 border-t border-slate-100">
+                            <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+                                    {supervisorInfo?.name[0]}
+                                </div>
+                                <div className="overflow-hidden">
+                                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest leading-none mb-1">Assigned Supervisor</p>
+                                    <p className="text-sm font-bold text-indigo-900 truncate">{supervisorInfo?.name || "Field Agent"}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
 
@@ -484,7 +511,7 @@ export default function StudentDashboard() {
                                                 method: "PATCH",
                                                 body: JSON.stringify({
                                                     taskId: taskSubmission.taskId,
-                                                    status: "IN_PROGRESS",
+                                                    status: "SUBMITTED",
                                                     description: taskSubmission.description,
                                                     attachments: taskSubmission.attachments
                                                 }),

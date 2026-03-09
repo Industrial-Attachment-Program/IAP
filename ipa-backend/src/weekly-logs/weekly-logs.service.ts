@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { WeeklyLogStatus } from '@prisma/client';
+// Enum import removed to resolve IDE error
+export type WeeklyLogStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 
 @Injectable()
 export class WeeklyLogsService {
@@ -24,6 +25,46 @@ export class WeeklyLogsService {
             where: { studentId },
             include: { dailyEntries: true },
             orderBy: { weekNumber: 'desc' },
+        });
+    }
+
+    async findBySupervisor(supervisorId: number) {
+        return this.prisma.weeklyLog.findMany({
+            where: {
+                student: {
+                    supervisorId: supervisorId
+                }
+            },
+            include: {
+                student: {
+                    include: {
+                        user: {
+                            select: { name: true, email: true }
+                        }
+                    }
+                }
+            },
+            orderBy: { updatedAt: 'desc' },
+        });
+    }
+
+    async findByLiaison(liaisonId: number) {
+        return this.prisma.weeklyLog.findMany({
+            where: {
+                student: {
+                    liaisonId: liaisonId
+                }
+            },
+            include: {
+                student: {
+                    include: {
+                        user: {
+                            select: { name: true, email: true }
+                        }
+                    }
+                }
+            },
+            orderBy: { updatedAt: 'desc' },
         });
     }
 
@@ -79,7 +120,7 @@ export class WeeklyLogsService {
                     weekNumber,
                     startDate: weekStart, // using the local weekStart variable but mapping to startDate field
                     endDate: weekEnd,     // using the local weekEnd variable but mapping to endDate field
-                    status: WeeklyLogStatus.DRAFT,
+                    status: 'DRAFT' as WeeklyLogStatus,
                 },
             });
         }
@@ -89,14 +130,16 @@ export class WeeklyLogsService {
 
     async submitWeek(
         id: number,
-        data: { generalStatement: string },
+        data: { generalStatement?: string },
     ) {
+        const updateData: any = { status: 'SUBMITTED' as WeeklyLogStatus };
+        if (data.generalStatement !== undefined) {
+            updateData.generalStatement = data.generalStatement;
+        }
+
         const weeklyLog = await this.prisma.weeklyLog.update({
             where: { id },
-            data: {
-                generalStatement: data.generalStatement,
-                status: WeeklyLogStatus.SUBMITTED,
-            },
+            data: updateData,
             include: {
                 student: {
                     include: {
@@ -121,7 +164,7 @@ export class WeeklyLogsService {
     async approveWeek(
         id: number,
         supervisorUserId: number,
-        note?: string,
+        data: { note?: string; supervisorName?: string; supervisorDate?: string }
     ) {
         const log = await this.prisma.weeklyLog.findUnique({
             where: { id },
@@ -139,8 +182,11 @@ export class WeeklyLogsService {
         const updatedLog = await this.prisma.weeklyLog.update({
             where: { id },
             data: {
-                status: WeeklyLogStatus.APPROVED,
-                supervisorNote: note,
+                status: 'APPROVED' as WeeklyLogStatus,
+                supervisorNote: data.note,
+                supervisorName: data.supervisorName,
+                supervisorDate: data.supervisorDate ? new Date(data.supervisorDate) : new Date(),
+                supervisorSignature: true,
                 approvedAt: new Date(),
             },
         });
@@ -151,6 +197,36 @@ export class WeeklyLogsService {
             message: `Your Weekly Log for Week ${log.weekNumber} has been approved.`,
             type: 'SUCCESS',
             link: '/student/logbook',
+        });
+
+        return updatedLog;
+    }
+
+    async verifyLiaison(
+        id: number,
+        liaisonUserId: number,
+        data: { liaisonName?: string; liaisonDate?: string }
+    ) {
+        const log = await this.prisma.weeklyLog.findUnique({
+            where: { id },
+            include: { student: { include: { liaison: true } } },
+        });
+
+        if (!log) throw new NotFoundException('Weekly log not found');
+
+        if (log.student.liaison?.userId !== liaisonUserId) {
+            throw new ForbiddenException(
+                'You are not authorized to verify this log as a Liaison',
+            );
+        }
+
+        const updatedLog = await this.prisma.weeklyLog.update({
+            where: { id },
+            data: {
+                liaisonSignature: true,
+                liaisonName: data.liaisonName,
+                liaisonDate: data.liaisonDate ? new Date(data.liaisonDate) : new Date(),
+            },
         });
 
         return updatedLog;
@@ -177,7 +253,7 @@ export class WeeklyLogsService {
         const updatedLog = await this.prisma.weeklyLog.update({
             where: { id },
             data: {
-                status: WeeklyLogStatus.REJECTED,
+                status: 'REJECTED' as WeeklyLogStatus,
                 supervisorNote: note,
             },
         });
@@ -206,9 +282,9 @@ export class WeeklyLogsService {
         }
 
         // Handle date and number conversions for the new fields
-        if (rest.startDate) rest.startDate = new Date(rest.startDate);
-        if (rest.endDate) rest.endDate = new Date(rest.endDate);
-        if (rest.supervisorDate) rest.supervisorDate = new Date(rest.supervisorDate);
+        rest.startDate = rest.startDate ? new Date(rest.startDate) : undefined;
+        rest.endDate = rest.endDate ? new Date(rest.endDate) : undefined;
+        rest.supervisorDate = (rest.supervisorDate && rest.supervisorDate !== "") ? new Date(rest.supervisorDate) : null;
 
         // Convert hours to Float
         if (rest.mondayHours !== undefined) rest.mondayHours = Number(rest.mondayHours);

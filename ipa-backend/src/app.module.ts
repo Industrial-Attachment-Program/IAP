@@ -13,6 +13,7 @@ import { IapReportsModule } from './iap-reports/iap-reports.module';
 
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { LiaisonsModule } from './liaisons/liaisons.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { APP_GUARD } from '@nestjs/core';
       ttl: 60000,
       limit: 10,
     }]),
+    LiaisonsModule,
 
   ],
   controllers: [AppController],

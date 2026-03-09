@@ -8,12 +8,13 @@ import {
     MapPin,
     Settings,
     LogOut,
+    Check
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useEffect, useState } from "react";
 
 interface SidebarProps {
-    role: "admin" | "supervisor" | "student";
+    role: "admin" | "supervisor" | "student" | "liaison";
     userId: number | null;
 }
 
@@ -30,6 +31,10 @@ interface User {
     };
     studentId?: number;
     supervisorId?: number;
+    liaisonId?: number;
+    liaisonProfile?: {
+        id: number;
+    };
 }
 
 export function Sidebar({ role, userId: propUserId }: SidebarProps) {
@@ -72,6 +77,10 @@ export function Sidebar({ role, userId: propUserId }: SidebarProps) {
         student: [
             { href: `/student/${user?.studentId || user?.studentProfile?.id || user?.id || propUserId}`, label: "Dashboard", icon: LayoutDashboard },
             { href: "/student/logbook", label: "Logbook", icon: FileText },
+            { href: "/student/tasks", label: "My Tasks", icon: Check },
+        ],
+        liaison: [
+            { href: `/liaison/${user?.liaisonId || user?.liaisonProfile?.id || user?.id || propUserId}`, label: "Portal", icon: LayoutDashboard },
         ],
     };
 
