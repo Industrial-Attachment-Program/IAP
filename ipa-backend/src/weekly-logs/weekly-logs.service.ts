@@ -6,7 +6,9 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-// Enum import removed to resolve IDE error
+
+const PDFDocument = require('pdfkit');
+
 export type WeeklyLogStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 
 @Injectable()
@@ -164,7 +166,7 @@ export class WeeklyLogsService {
     async approveWeek(
         id: number,
         supervisorUserId: number,
-        data: { note?: string; supervisorName?: string; supervisorDate?: string }
+        data: { note?: string; supervisorName?: string; supervisorDate?: string; grade?: string }
     ) {
         const log = await this.prisma.weeklyLog.findUnique({
             where: { id },
@@ -179,7 +181,7 @@ export class WeeklyLogsService {
             );
         }
 
-        const updatedLog = await this.prisma.weeklyLog.update({
+        const updatedLog = await (this.prisma.weeklyLog.update as any)({
             where: { id },
             data: {
                 status: 'APPROVED' as WeeklyLogStatus,
@@ -187,6 +189,7 @@ export class WeeklyLogsService {
                 supervisorName: data.supervisorName,
                 supervisorDate: data.supervisorDate ? new Date(data.supervisorDate) : new Date(),
                 supervisorSignature: true,
+                grade: data.grade,
                 approvedAt: new Date(),
             },
         });
@@ -311,6 +314,110 @@ export class WeeklyLogsService {
                 weekNumber: wNum,
                 ...rest,
             },
+        });
+    }
+
+    async generatePdf(id: number, user: { userId: number; role: string }) {
+        const log = await this.prisma.weeklyLog.findUnique({
+            where: { id },
+            include: {
+                student: {
+                    include: {
+                        user: true,
+                        supervisor: { include: { user: true } },
+                        liaison: { include: { user: true } },
+                    },
+                },
+            },
+        });
+
+        if (!log) {
+            throw new NotFoundException('Weekly log not found');
+        }
+
+        const isSupervisor = log.student.supervisor?.userId === user.userId;
+        const isLiaison = log.student.liaison?.userId === user.userId;
+        const isStudent = log.student.userId === user.userId;
+
+        if (!isSupervisor && !isLiaison && !isStudent && user.role !== 'ADMIN') {
+            throw new ForbiddenException('You are not allowed to download this log');
+        }
+
+        const doc = new PDFDocument({ margin: 40 });
+        const chunks: Buffer[] = [];
+        doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+
+        doc.fontSize(18).text('Weekly Log Report', { align: 'center' }).moveDown();
+
+        doc.fontSize(12)
+            .text(`Student: ${log.student.fullName} (${log.student.user.email})`)
+            .text(`Week: ${log.weekNumber}`)
+            .text(
+                `Period: ${log.startDate.toDateString()} - ${log.endDate.toDateString()}`,
+            );
+
+        if ((log as any).grade) {
+            doc.text(`Grade: ${(log as any).grade}`);
+        }
+
+        doc.moveDown();
+
+        if (log.student.companyName) {
+            doc.text(`Company: ${log.student.companyName}`);
+        }
+        if (log.student.supervisor?.user?.name) {
+            doc.text(`Supervisor: ${log.student.supervisor.user.name}`);
+        }
+        if (log.student.liaison?.user?.name) {
+            doc.text(`Liaison Officer: ${log.student.liaison.user.name}`);
+        }
+
+        doc.moveDown();
+
+        // Signatures/Verification section
+        doc.fontSize(14).text('Verification Status', { underline: true }).moveDown(0.5);
+        doc.fontSize(11);
+        doc.text(`Supervisor Signature: ${log.supervisorSignature ? 'YES' : 'NO'}`);
+        if (log.supervisorDate) doc.text(`Supervisor Approved Date: ${log.supervisorDate.toDateString()}`);
+
+        doc.moveDown(0.5);
+        doc.text(`Liaison Signature: ${log.liaisonSignature ? 'YES' : 'NO'}`);
+        if (log.liaisonDate) doc.text(`Liaison Verified Date: ${log.liaisonDate.toDateString()}`);
+        if (log.liaisonName) doc.text(`Liaison Name: ${log.liaisonName}`);
+
+        doc.moveDown();
+
+        doc.fontSize(14).text('Daily Activities', { underline: true }).moveDown(0.5);
+        doc.fontSize(11);
+
+        const days = [
+            { label: 'Monday', task: log.mondayTask, hours: log.mondayHours },
+            { label: 'Tuesday', task: log.tuesdayTask, hours: log.tuesdayHours },
+            { label: 'Wednesday', task: log.wednesdayTask, hours: log.wednesdayHours },
+            { label: 'Thursday', task: log.thursdayTask, hours: log.thursdayHours },
+            { label: 'Friday', task: log.fridayTask, hours: log.fridayHours },
+        ];
+
+        days.forEach((day) => {
+            doc.font('Helvetica-Bold')
+                .text(day.label, { continued: true })
+                .font('Helvetica')
+                .text(`  - Hours: ${day.hours ?? 0}`);
+            if (day.task) {
+                doc.text(day.task, { indent: 16 });
+            }
+            doc.moveDown(0.5);
+        });
+
+        if (log.generalStatement) {
+            doc.moveDown().fontSize(14).text('General Statement', { underline: true });
+            doc.moveDown(0.5).fontSize(11).text(log.generalStatement);
+        }
+
+        doc.end();
+
+        return await new Promise<Buffer>((resolve) => {
+            doc.on('end', () => resolve(Buffer.concat(chunks)));
         });
     }
 }

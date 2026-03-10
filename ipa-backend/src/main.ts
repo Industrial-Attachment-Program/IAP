@@ -12,7 +12,6 @@ async function bootstrap() {
   });
   app.setGlobalPrefix('api');
 
-  // Swagger Configuration
   const config = new DocumentBuilder()
     .setTitle('IPA Backend API')
     .setDescription('Industrial Placement Application (IPA) - API Documentation for managing students, supervisors, tasks, and internship workflows')

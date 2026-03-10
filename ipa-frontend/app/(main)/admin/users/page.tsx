@@ -27,7 +27,7 @@ interface User {
     id: number;
     name: string;
     email: string;
-    role: "ADMIN" | "SUPERVISOR" | "STUDENT";
+    role: "ADMIN" | "SUPERVISOR" | "STUDENT" | "LIAISON";
     isActive: boolean;
     createdAt: string;
     studentProfile?: { studentNumber: string };
@@ -47,8 +47,12 @@ export default function UsersPage() {
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const data = await apiFetch("/admin/users");
-            setUsers(data.users || []);
+            const result = await apiFetch("/admin/users") as any;
+            if (result.ok) {
+                setUsers(result.data.users || []);
+            } else {
+                console.error("Error fetching users:", result.error);
+            }
         } catch (error) {
             console.error("Error fetching users:", error);
         } finally {
@@ -59,8 +63,12 @@ export default function UsersPage() {
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) return;
         try {
-            await apiFetch(`/admin/users?id=${id}`, { method: "DELETE" });
-            fetchUsers();
+            const result = await apiFetch(`/admin/users?id=${id}`, { method: "DELETE" });
+            if (result.ok) {
+                fetchUsers();
+            } else {
+                alert(result.error || "Error deleting user");
+            }
         } catch (error) {
             console.error("Error deleting user:", error);
         }
@@ -68,11 +76,15 @@ export default function UsersPage() {
 
     const toggleActivation = async (id: number) => {
         try {
-            await apiFetch('/admin/toggle-activation', {
+            const result = await apiFetch('/admin/toggle-activation', {
                 method: 'POST',
                 body: JSON.stringify({ id })
             });
-            fetchUsers();
+            if (result.ok) {
+                fetchUsers();
+            } else {
+                alert(result.error || "Error toggling activation");
+            }
         } catch (error) {
             console.error("Error toggling activation:", error);
         }
@@ -94,6 +106,7 @@ export default function UsersPage() {
             case "ADMIN": return <Shield className="h-4 w-4" />;
             case "SUPERVISOR": return <Briefcase className="h-4 w-4" />;
             case "STUDENT": return <GraduationCap className="h-4 w-4" />;
+            case "LIAISON": return <UserCheck className="h-4 w-4" />;
             default: return <UserCog className="h-4 w-4" />;
         }
     };
@@ -144,6 +157,7 @@ export default function UsersPage() {
                             <option value="ADMIN">Admins</option>
                             <option value="SUPERVISOR">Supervisors</option>
                             <option value="STUDENT">Students</option>
+                            <option value="LIAISON">Liaison Officers</option>
                         </select>
                     </div>
                 </div>

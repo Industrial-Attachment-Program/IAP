@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit } from "next/font/google";
+import { Outfit, Jost } from "next/font/google";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -7,9 +7,14 @@ const outfit = Outfit({
   variable: "--font-outfit",
 });
 
+const jost = Jost({
+  subsets: ["latin"],
+  variable: "--font-jost",
+});
+
 export const metadata: Metadata = {
   title: "IAP Management System",
-  description: "Industrial Attachment Program Management System",
+  description: "Industrial Attachment Program",
 };
 
 export default function RootLayout({
@@ -19,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${outfit.variable} antialiased font-sans`}>
+      <body className={`${outfit.variable} ${jost.variable} antialiased font-sans`}>
         {children}
       </body>
     </html>

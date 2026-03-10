@@ -98,6 +98,7 @@ export class AuthService {
       email: user.email,
       name: user.name,
       role: user.role,
+      tokenVersion: user.tokenVersion,
       profileCompleted: false,
     };
 
@@ -137,7 +138,39 @@ export class AuthService {
         liaisonProfile: true,
       }
     });
-    return user;
+
+    if (!user) return null;
+
+    const userResponse: any = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tokenVersion: user.tokenVersion,
+      profileCompleted: false,
+    };
+
+    if (user.role === 'STUDENT' && user.studentProfile) {
+      userResponse.profileCompleted = user.studentProfile.profileCompleted;
+      userResponse.studentId = user.studentProfile.id;
+      userResponse.studentProfile = {
+        id: user.studentProfile.id,
+        profileCompleted: user.studentProfile.profileCompleted,
+        studentNumber: user.studentProfile.studentNumber,
+      };
+    } else if (user.role === 'SUPERVISOR' && user.supervisorProfile) {
+      userResponse.supervisorId = user.supervisorProfile.id;
+      userResponse.supervisorProfile = {
+        id: user.supervisorProfile.id,
+      };
+    } else if (user.role === 'LIAISON' && user.liaisonProfile) {
+      userResponse.liaisonId = user.liaisonProfile.id;
+      userResponse.liaisonProfile = {
+        id: user.liaisonProfile.id,
+      };
+    }
+
+    return userResponse;
   }
 
   async forgotPassword(email: string) {

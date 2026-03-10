@@ -85,7 +85,7 @@ export default function LandingPage() {
                 </Link>
                 <Link href="/objectives">
                   <Button variant="outline" size="lg" className="h-16 px-10 text-lg cursor-pointer rounded-2xl border-2 border-primary/10 hover:bg-primary/5 transition-all text-primary font-bold">
-                    View Programs
+                    View Objectives
                   </Button>
                 </Link>
               </motion.div>

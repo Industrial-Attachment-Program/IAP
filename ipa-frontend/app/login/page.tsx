@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Mail, ArrowRight, Loader2, Eye, EyeOff, ChevronRight } from "lucide-react";
@@ -17,9 +17,9 @@ export default function LoginPage() {
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,35 +27,43 @@ export default function LoginPage() {
         setError("");
 
         try {
-            const data = await apiFetch("/auth/login", {
+            const result = await apiFetch("/auth/login", {
                 method: "POST",
                 body: JSON.stringify({ email, password }),
             });
 
-            if (data.user) {
+            if (!result.ok) {
+                setError(result.error || "Invalid credentials. Please try again.");
+                return;
+            }
+
+            const { data } = result;
+
+            if (data?.user) {
                 const user = data.user;
                 localStorage.setItem("user", JSON.stringify(user));
                 localStorage.setItem("token", data.token || "");
 
-                const { role, profileCompleted, id, studentId, supervisorId } = user;
+                const role = user.role?.toUpperCase();
+                const sid = user.studentId || user.supervisorId || user.liaisonId || user.id;
 
                 if (role === "ADMIN") {
                     router.push("/admin");
                 } else if (role === "SUPERVISOR") {
-                    const sid = supervisorId || user.supervisorProfile?.id || id;
                     router.push(`/supervisor/${sid}`);
+                } else if (role === "LIAISON") {
+                    router.push(`/liaison/${sid}`);
                 } else if (role === "STUDENT") {
-                    const sid = studentId || user.studentProfile?.id || id;
                     if (!sid) {
                         setError("Student profile not found. Please contact admin.");
                         return;
                     }
 
-                    if (user.studentProfile?.id) {
-                        localStorage.setItem("studentProfileId", String(user.studentProfile.id));
+                    if (user.studentId || user.studentProfile?.id) {
+                        localStorage.setItem("studentProfileId", String(user.studentId || user.studentProfile.id));
                     }
 
-                    if (profileCompleted || user.studentProfile?.profileCompleted) {
+                    if (user.profileCompleted || user.studentProfile?.profileCompleted) {
                         router.push(`/student/${sid}`);
                     } else {
                         router.push(`/complete-profile?token=login_${sid}`);
@@ -63,6 +71,8 @@ export default function LoginPage() {
                 } else {
                     router.push("/login");
                 }
+            } else {
+                setError("Unexpected response from server.");
             }
         } catch (err: any) {
             setError(err.message || "Invalid credentials. Please try again.");

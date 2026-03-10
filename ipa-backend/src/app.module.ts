@@ -14,6 +14,7 @@ import { IapReportsModule } from './iap-reports/iap-reports.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { LiaisonsModule } from './liaisons/liaisons.module';
+import { RatingsModule } from './ratings/ratings.module';
 
 @Module({
   imports: [
@@ -29,10 +30,10 @@ import { LiaisonsModule } from './liaisons/liaisons.module';
     IapReportsModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
-      limit: 10,
+      limit: 100,
     }]),
     LiaisonsModule,
-
+    RatingsModule,
   ],
   controllers: [AppController],
   providers: [

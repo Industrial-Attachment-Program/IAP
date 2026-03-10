@@ -4,71 +4,67 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { motion } from "framer-motion";
 import { Search, Home, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+
 
 export default function NotFound() {
+    const router = useRouter();
+
     return (
-        <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center p-6 select-none overflow-hidden">
-            <div className="absolute inset-0 -z-10">
-                <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl opacity-50" />
-                <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-primary/5 rounded-full blur-[100px] opacity-50" />
+        <div className="h-screen w-screen bg-white flex items-center justify-center relative overflow-hidden font-sans selection:bg-primary/10">
+            {/* Subtle Background Accents */}
+            <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-0 right-0 w-[40%] h-[40%] bg-linear-to-bl from-primary/5 to-transparent rounded-bl-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-[40%] h-[40%] bg-linear-to-tr from-primary/5 to-transparent rounded-tr-full blur-3xl" />
             </div>
 
-            <div className="max-w-2xl w-full text-center relative z-10">
+            <div className="relative z-10 max-w-2xl w-full px-6 flex flex-col items-center">
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    className="flex flex-col items-center text-center"
                 >
-                    <div className="relative inline-block mb-12">
+                    {/* Clean 404 Indicator */}
+                    <div className="mb-8 relative">
                         <motion.div
-                            animate={{
-                                rotate: [0, 10, -10, 0],
-                                y: [0, -5, 5, 0]
-                            }}
-                            transition={{
-                                duration: 6,
-                                repeat: Infinity,
-                                ease: "easeInOut"
-                            }}
-                            className="text-[12rem] font-black text-primary/5 leading-none select-none tracking-tighter"
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                            transition={{ duration: 0.5 }}
+                            className="text-[12rem] md:text-[16rem] font-black leading-none text-neutral-300 select-none tracking-tighter"
                         >
                             404
                         </motion.div>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="h-32 w-32 bg-white rounded-4xl shadow-2xl flex items-center justify-center border border-primary/5">
-                                <Search className="h-12 w-12 text-primary/20 stroke-3" />
-                            </div>
-                        </div>
                     </div>
 
-                    <h1 className="text-5xl font-black text-primary font-heading tracking-tight mb-6">
-                        Page <span className="text-primary/30 italic">Not Found</span>
+                    <h1 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-4 tracking-tight">
+                        Page Not Found
                     </h1>
 
-                    <p className="text-xl text-primary/60 font-medium leading-relaxed mb-12 max-w-lg mx-auto">
-                        The requested technical path does not exist in our registry. It may have been relocated or deprecated.
+                    <p className="text-lg text-neutral-500 mb-12 max-w-md mx-auto leading-relaxed">
+                        We couldn't find the page you're looking for. It might have been moved or deleted.
                     </p>
 
-                    <div className="flex flex-col md:flex-row items-center justify-center gap-6">
-                        <Link href="/">
-                            <Button size="lg" className="rounded-2xl h-16 px-10 text-sm font-black uppercase tracking-widest shadow-2xl shadow-primary/20 hover:scale-105 transition-all">
-                                <Home className="mr-3 h-5 w-5" /> Return to Base
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
+                        <Link href="/" className="w-full sm:w-auto">
+                            <Button size="lg" className="w-full sm:w-auto rounded-xl h-14 px-8 text-sm font-semibold bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95">
+                                <Home className="mr-2 h-4 w-4" /> Go to Dashboard
                             </Button>
                         </Link>
                         <Button
                             variant="outline"
                             size="lg"
                             onClick={() => window.history.back()}
-                            className="rounded-2xl h-16 px-10 text-sm font-black uppercase tracking-widest border-2 border-primary/10 hover:bg-primary/5 transition-all"
+                            className="w-full sm:w-auto rounded-xl h-14 px-8 text-sm font-semibold border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-all active:scale-95"
                         >
-                            <ArrowLeft className="mr-3 h-5 w-5" /> Previous Session
+                            <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
                         </Button>
                     </div>
 
-                    <div className="mt-20 pt-10 border-t border-primary/5">
-                        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-primary/20 italic">
-                            RCA Industrial Attachment Program • Error Code: 0x404
-                        </p>
+                    <div className="mt-24 text-neutral-300 text-[10px] font-bold uppercase tracking-[0.3em] flex items-center gap-3">
+                        <span>IPA System</span>
+                        <span className="h-1 w-1 rounded-full bg-neutral-200" />
+                        <span>Error 404</span>
                     </div>
                 </motion.div>
             </div>

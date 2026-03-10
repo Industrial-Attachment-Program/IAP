@@ -55,7 +55,7 @@ export function Navbar() {
               font-bold text-primary font-heading tracking-tight leading-none transition-all duration-300
               ${isScrolled ? "text-sm" : "text-lg"}
             `}>
-              IPA System
+              IAP System
             </span>
             {!isScrolled && (
               <motion.span
@@ -63,7 +63,7 @@ export function Navbar() {
                 animate={{ opacity: 1 }}
                 className="text-[8px] uppercase tracking-[0.2em] text-primary/60 font-bold"
               >
-                Industrial Attachment
+                Industrial Attachment Program
               </motion.span>
             )}
           </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -17,9 +18,10 @@ import {
   AlertCircle,
   Clock,
   RefreshCw,
+  MessageSquare,
+  Loader2,
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
-import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 
 
@@ -34,6 +36,9 @@ interface Student {
   companyAddress?: string;
   supervisorName?: string;
   supervisorEmail?: string;
+  liaisonOfficerName?: string;
+  absentDays?: number;
+  ratings?: Rating[];
 }
 
 interface Task {
@@ -79,6 +84,51 @@ interface WeeklyLog {
   supervisorSignature?: boolean;
 }
 
+interface Rating {
+  id: number;
+  rating: number;
+  comment?: string;
+  knowledgeWirelessOps?: number;
+  knowledgeWirelessEst?: number;
+  knowledgeWirelessMaint?: number;
+  knowledgeApplication?: number;
+  responsibility?: number;
+  cooperativeness?: number;
+  complianceEtiquette?: number;
+  safetyAwareness?: number;
+  safetyCompliance?: number;
+  safetyArrangement?: number;
+  createdAt: string;
+}
+
+interface AssessmentData {
+  knowledgeWirelessOps: number;
+  knowledgeWirelessEst: number;
+  knowledgeWirelessMaint: number;
+  knowledgeApplication: number;
+  responsibility: number;
+  cooperativeness: number;
+  complianceEtiquette: number;
+  safetyAwareness: number;
+  safetyCompliance: number;
+  safetyArrangement: number;
+  absentDays: number;
+  comment: string;
+  isUseful?: string;
+  improvedUnderstanding?: string;
+  providedExperiences?: string;
+  loVisitCount?: number;
+  programmeTypes?: string[];
+  otherProgrammeDetails?: string;
+  satisfactionIndustry?: string;
+  satisfactionMajor?: string;
+  satisfactionPractical?: string;
+  satisfactionInstructors?: string;
+  notableAchievements?: string;
+  futureCareerPlan?: string;
+  suggestions?: string;
+}
+
 // ----- Component -----
 export default function SupervisorDashboard() {
   const [activeTab, setActiveTab] = useState<"overview" | "students" | "tasks" | "weekly-logs">("overview");
@@ -116,6 +166,33 @@ export default function SupervisorDashboard() {
   });
   const [ratingValue, setRatingValue] = useState(7);
   const [ratingComment, setRatingComment] = useState("");
+  const [assessment, setAssessment] = useState<AssessmentData>({
+    knowledgeWirelessOps: 0,
+    knowledgeWirelessEst: 0,
+    knowledgeWirelessMaint: 0,
+    knowledgeApplication: 0,
+    responsibility: 0,
+    cooperativeness: 0,
+    complianceEtiquette: 0,
+    safetyAwareness: 0,
+    safetyCompliance: 0,
+    safetyArrangement: 0,
+    absentDays: 0,
+    comment: "",
+    isUseful: undefined,
+    improvedUnderstanding: undefined,
+    providedExperiences: undefined,
+    loVisitCount: 0,
+    programmeTypes: [],
+    otherProgrammeDetails: "",
+    satisfactionIndustry: undefined,
+    satisfactionMajor: undefined,
+    satisfactionPractical: undefined,
+    satisfactionInstructors: undefined,
+    notableAchievements: "",
+    futureCareerPlan: "",
+    suggestions: ""
+  });
 
   const params = useParams();
   const searchParams = useSearchParams();
@@ -126,34 +203,43 @@ export default function SupervisorDashboard() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    const token = localStorage.getItem("token");
-
-    if (!storedUser || !token) {
-      router.replace("/login");
-      return;
-    }
+    if (!storedUser) return;
 
     try {
       const user = JSON.parse(storedUser);
-      if (user.role === "SUPERVISOR" && user.supervisorProfile?.id !== supervisorId) {
-        router.replace("/login");
-        return;
+      const userRole = user.role?.toUpperCase();
+
+      // Better supervisorId resolution
+      let effectiveSupervisorId = supervisorId;
+      if (!effectiveSupervisorId && user.supervisorProfile?.id) {
+        effectiveSupervisorId = user.supervisorProfile.id;
       }
-      if (user.role !== "SUPERVISOR" && user.role !== "ADMIN") {
-        router.replace("/login");
-        return;
+      if (!effectiveSupervisorId && userRole === "SUPERVISOR") {
+        effectiveSupervisorId = user.id;
       }
-      setIsAuthorized(true);
+
+      // Update state if we found a better ID
+      // ... actually, we should use a ref or just use the local variable in handleRateTask
+
+      const userSupervisorId = Number(user.supervisorId || user.supervisorProfile?.id || user.id);
+
+      if (userRole === "ADMIN" || (userRole === "SUPERVISOR" && (userSupervisorId === effectiveSupervisorId || !supervisorId))) {
+        setIsAuthorized(true);
+      }
     } catch (e) {
-      router.replace("/login");
+      console.error("SupervisorDashboard: Auth parse failed", e);
     }
   }, [supervisorId, router]);
 
   // ----- Fetch Data -----
   const fetchStudents = async () => {
     try {
-      const data = await apiFetch(`/students?supervisorId=${supervisorId}`);
-      setStudents(data.students || []);
+      const result = await apiFetch(`/students?supervisorId=${supervisorId}`);
+      if (result.ok) {
+        setStudents(result.data.students || []);
+      } else {
+        toast.error(result.error || "Failed to load students");
+      }
     } catch (error) {
       console.error("Error fetching students:", error);
     }
@@ -161,8 +247,12 @@ export default function SupervisorDashboard() {
 
   const fetchTasks = async () => {
     try {
-      const data = await apiFetch(`/tasks?supervisorId=${supervisorId}`);
-      setTasks(data.tasks || []);
+      const result = await apiFetch(`/tasks?supervisorId=${supervisorId}`);
+      if (result.ok) {
+        setTasks(result.data.tasks || []);
+      } else {
+        toast.error(result.error || "Failed to load tasks");
+      }
     } catch (error) {
       console.error("Error fetching tasks:", error);
     }
@@ -170,8 +260,10 @@ export default function SupervisorDashboard() {
 
   const fetchWeeklyLogs = async () => {
     try {
-      const data = await apiFetch(`/weekly-logs?supervisorId=${supervisorId}`);
-      setWeeklyLogs(data.logs || []);
+      const result = await apiFetch(`/weekly-logs?supervisorId=${supervisorId}`);
+      if (result.ok) {
+        setWeeklyLogs(result.data.logs || []);
+      }
     } catch (error) {
       console.error("Error fetching weekly logs:", error);
     }
@@ -282,25 +374,133 @@ export default function SupervisorDashboard() {
   };
 
   const handleRateTask = async () => {
-    if (!selectedTask) return;
+    if (!selectedTask && !selectedStudent) return;
+
     try {
-      await apiFetch("/tasks", {
-        method: "PATCH",
-        body: JSON.stringify({
-          taskId: selectedTask.id,
-          status: "COMPLETED",
-          rating: ratingValue,
-          comment: ratingComment,
-          supervisorId,
-        }),
-      });
-      fetchTasks();
+      let finalSupervisorId = supervisorId;
+      if (!finalSupervisorId) {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          finalSupervisorId = user.supervisorProfile?.id || user.id;
+        }
+      }
+
+      if (selectedTask) {
+        // Rate a specific task
+        await apiFetch("/tasks", {
+          method: "PATCH",
+          body: JSON.stringify({
+            taskId: selectedTask.id,
+            status: "COMPLETED",
+            rating: ratingValue,
+            comment: ratingComment,
+            supervisorId: finalSupervisorId,
+          }),
+        });
+      } else if (selectedStudent) {
+        // Rate the student (Final Assessment) - Simplified version if needed, 
+        // but now we have a detailed one.
+        await apiFetch("/ratings", {
+          method: "POST",
+          body: JSON.stringify({
+            studentId: selectedStudent.id,
+            supervisorId: finalSupervisorId,
+            rating: ratingValue,
+            comment: ratingComment,
+          }),
+        });
+        toast.success(`Student ${selectedStudent.user?.name || selectedStudent.name} rated successfully`);
+      }
+
+      fetchAllData();
+      toast.success(selectedTask ? "Task rated successfully" : "Student assessment completed");
       setShowRatingModal(false);
       setSelectedTask(null);
+      setSelectedStudent(null);
       setRatingValue(7);
       setRatingComment("");
     } catch (error) {
       console.error(error);
+      toast.error("Failed to submit rating");
+    }
+  };
+
+  const handleSaveAssessment = async () => {
+    if (!selectedStudent) return;
+    setIsSaving(true);
+    try {
+      let finalSupervisorId = supervisorId;
+      if (!finalSupervisorId) {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const user = JSON.parse(storedUser);
+          finalSupervisorId = user.supervisorProfile?.id || user.id;
+        }
+      }
+
+      // 1. Update Student's absentDays
+      await apiFetch(`/students/${selectedStudent.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ absentDays: assessment.absentDays })
+      });
+
+      // 2. Submit detailed final assessment rating
+      const totalScore =
+        assessment.knowledgeWirelessOps + assessment.knowledgeWirelessEst + assessment.knowledgeWirelessMaint + assessment.knowledgeApplication +
+        assessment.responsibility + assessment.cooperativeness + assessment.complianceEtiquette +
+        assessment.safetyAwareness + assessment.safetyCompliance + assessment.safetyArrangement;
+
+      await apiFetch("/ratings", {
+        method: "POST",
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
+          supervisorId: finalSupervisorId,
+          rating: totalScore,
+          comment: assessment.comment,
+          knowledgeWirelessOps: assessment.knowledgeWirelessOps,
+          knowledgeWirelessEst: assessment.knowledgeWirelessEst,
+          knowledgeWirelessMaint: assessment.knowledgeWirelessMaint,
+          knowledgeApplication: assessment.knowledgeApplication,
+          responsibility: assessment.responsibility,
+          cooperativeness: assessment.cooperativeness,
+          complianceEtiquette: assessment.complianceEtiquette,
+          safetyAwareness: assessment.safetyAwareness,
+          safetyCompliance: assessment.safetyCompliance,
+          safetyArrangement: assessment.safetyArrangement,
+        }),
+      });
+
+      // 3. Submit Employer Copy Form
+      await apiFetch("/iap-reports", {
+        method: "POST",
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
+          isUseful: assessment.isUseful === "Yes" ? true : assessment.isUseful === "No" ? false : undefined,
+          improvedUnderstanding: assessment.improvedUnderstanding === "Yes" ? true : assessment.improvedUnderstanding === "No" ? false : undefined,
+          providedExperiences: assessment.providedExperiences === "Yes" ? true : assessment.providedExperiences === "No" ? false : undefined,
+          loVisitCount: assessment.loVisitCount,
+          programmeTypes: assessment.programmeTypes,
+          otherProgrammeDetails: assessment.otherProgrammeDetails,
+          satisfactionIndustry: assessment.satisfactionIndustry,
+          satisfactionMajor: assessment.satisfactionMajor,
+          satisfactionPractical: assessment.satisfactionPractical,
+          satisfactionInstructors: assessment.satisfactionInstructors,
+          notableAchievements: assessment.notableAchievements,
+          futureCareerPlan: assessment.futureCareerPlan,
+          suggestions: assessment.suggestions
+        })
+      });
+
+      toast.success("Industrial assessment submitted and synced");
+      setShowRatingModal(false);
+      setSelectedStudent(null);
+      fetchAllData();
+    } catch (error) {
+      toast.error("Assessment sync failed");
+      console.error(error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -562,6 +762,7 @@ export default function SupervisorDashboard() {
                           className="flex-1 text-xs h-9 cursor-pointer"
                           onClick={() => {
                             setSelectedStudent(student);
+                            setRatingValue(80); // Default 80% for student assessment
                             setShowRatingModal(true);
                           }}
                         >
@@ -609,7 +810,11 @@ export default function SupervisorDashboard() {
                 </div>
                 <div className="flex-1 flex flex-col gap-3 overflow-y-auto bg-slate-50/50 p-2 rounded-2xl border-2 border-dashed border-slate-200 min-h-0 hide-scrollbar">
                   {tasks.filter(t => t.status === column.status).map(task => (
-                    <Card key={task.id} className="hover:shadow-md transition-shadow cursor-pointer group shrink-0" onClick={() => { setSelectedTask(task); if (task.status === 'SUBMITTED') setShowRatingModal(true); }}>
+                    <Card key={task.id} className="hover:shadow-md transition-shadow cursor-pointer group shrink-0" onClick={() => {
+                      setSelectedTask(task);
+                      setRatingValue(10); // Default 10 for task rating
+                      if (task.status === 'SUBMITTED') setShowRatingModal(true);
+                    }}>
                       <CardContent className="p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
@@ -776,73 +981,315 @@ export default function SupervisorDashboard() {
       <AnimatePresence>
         {showRatingModal && (selectedStudent || selectedTask) && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
           >
-            <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
-              <div className="p-6 border-b border-primary/10 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-primary">
-                  {selectedTask ? `Rate Task: ${selectedTask.title}` : `Rate ${selectedStudent?.name}`}
-                </h3>
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className={cn(
+                "bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col",
+                selectedTask ? "w-full max-w-lg" : "w-full max-w-4xl max-h-[90vh]"
+              )}
+            >
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                <div>
+                  <h3 className="text-xl font-black text-primary tracking-tight">
+                    {selectedTask ? "Task Performance Review" : "Industrial Attachment Assessment"}
+                  </h3>
+                  <p className="text-sm text-slate-500 font-medium">
+                    {selectedTask ? `Evaluating: ${selectedTask.title}` : `Final evaluation for ${selectedStudent?.user?.name || selectedStudent?.name}`}
+                  </p>
+                </div>
                 <button
                   onClick={() => {
                     setShowRatingModal(false);
                     setSelectedTask(null);
                   }}
-                  className="text-primary hover:text-primary/80"
+                  className="h-10 w-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-primary transition-all"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
-              <div className="p-6 space-y-6">
-                {selectedTask && (
-                  <div className="bg-primary/5 p-4 rounded-lg">
-                    <p className="text-sm text-primary font-medium mb-2">Task Description:</p>
-                    <p className="text-sm text-primary">{selectedTask.description}</p>
+              <div className="flex-1 overflow-y-auto p-8 pt-6">
+                {selectedTask ? (
+                  <div className="space-y-6">
+                    <div className="bg-primary/5 p-5 rounded-2xl border border-primary/10">
+                      <p className="text-xs font-bold text-primary/60 uppercase tracking-widest mb-2">Internal Task Note</p>
+                      <p className="text-sm text-primary leading-relaxed">{selectedTask.description}</p>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="text-sm font-bold text-slate-700 block">Performance Rating (1-10)</label>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="range"
+                          min={1}
+                          max={10}
+                          value={ratingValue}
+                          className="flex-1 h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-primary"
+                          onChange={(e) => setRatingValue(Number(e.target.value))}
+                        />
+                        <span className="h-12 w-12 rounded-xl bg-primary text-white flex items-center justify-center font-black text-lg shadow-lg shadow-primary/20">
+                          {ratingValue}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700 block">Supervisor Comments</label>
+                      <textarea
+                        placeholder="Provide feedback on task execution..."
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary focus:ring-4 focus:ring-primary/5 min-h-[120px] outline-none transition-all"
+                        value={ratingComment}
+                        onChange={(e) => setRatingComment(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                      {/* Section 1: Related Knowledge */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                          <div className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">1</div>
+                          <h4 className="font-black text-slate-800 uppercase tracking-tight text-sm">Related Knowledge (40%)</h4>
+                        </div>
+
+                        {[
+                          { id: 'knowledgeWirelessOps', label: 'Support for wireless network ops' },
+                          { id: 'knowledgeWirelessEst', label: 'Establishment of wireless network' },
+                          { id: 'knowledgeWirelessMaint', label: 'Maintenance of wireless comm room' },
+                          { id: 'knowledgeApplication', label: 'Related knowledge application' },
+                        ].map(item => (
+                          <div key={item.id} className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <label className="text-xs font-bold text-slate-500 uppercase">{item.label}</label>
+                              <span className="text-xs font-black text-primary bg-primary/5 px-2 py-0.5 rounded-md">{assessment[item.id as keyof AssessmentData]}/10</span>
+                            </div>
+                            <input
+                              type="range" min="0" max="10"
+                              value={assessment[item.id as keyof AssessmentData] as number}
+                              onChange={(e) => setAssessment({ ...assessment, [item.id]: Number(e.target.value) })}
+                              className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Section 2: Responsibility */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                          <div className="h-8 w-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm">2</div>
+                          <h4 className="font-black text-slate-800 uppercase tracking-tight text-sm">Responsibility & Attitude (30%)</h4>
+                        </div>
+
+                        {[
+                          { id: 'responsibility', label: 'Responsibility' },
+                          { id: 'cooperativeness', label: 'Cooperativeness' },
+                          { id: 'complianceEtiquette', label: 'Compliance & Etiquette' },
+                        ].map(item => (
+                          <div key={item.id} className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <label className="text-xs font-bold text-slate-500 uppercase">{item.label}</label>
+                              <span className="text-xs font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">{assessment[item.id as keyof AssessmentData]}/10</span>
+                            </div>
+                            <input
+                              type="range" min="0" max="10"
+                              value={assessment[item.id as keyof AssessmentData] as number}
+                              onChange={(e) => setAssessment({ ...assessment, [item.id]: Number(e.target.value) })}
+                              className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                            />
+                          </div>
+                        ))}
+
+                        <div className="pt-4 border-t border-slate-50">
+                          <label className="text-xs font-black text-slate-500 uppercase mb-2 block">Days of Absence (Max 100)</label>
+                          <div className="flex items-center gap-4">
+                            <Input
+                              type="number" min="0" max="100"
+                              className="h-11 font-bold text-lg"
+                              value={assessment.absentDays}
+                              onChange={(e) => setAssessment({ ...assessment, absentDays: Number(e.target.value) })}
+                            />
+                            <p className="text-[10px] text-slate-400 leading-tight">10 points deducted for each unauthorised absence.</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 3: Safety */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                          <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">3</div>
+                          <h4 className="font-black text-slate-800 uppercase tracking-tight text-sm">Safety Management (30%)</h4>
+                        </div>
+
+                        {[
+                          { id: 'safetyAwareness', label: 'Awareness of safety mgmt' },
+                          { id: 'safetyCompliance', label: 'Compliance with safety rules' },
+                          { id: 'safetyArrangement', label: 'Arrangement of safety instruments' },
+                        ].map(item => (
+                          <div key={item.id} className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <label className="text-xs font-bold text-slate-500 uppercase">{item.label}</label>
+                              <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">{assessment[item.id as keyof AssessmentData]}/10</span>
+                            </div>
+                            <input
+                              type="range" min="0" max="10"
+                              value={assessment[item.id as keyof AssessmentData] as number}
+                              onChange={(e) => setAssessment({ ...assessment, [item.id]: Number(e.target.value) })}
+                              className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Section 4: Employer Assessment Form */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                          <div className="h-8 w-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-sm">4</div>
+                          <h4 className="font-black text-slate-800 uppercase tracking-tight text-sm">Employer Report & Satisfaction</h4>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {[
+                            { id: 'isUseful', label: 'Was the IAP useful?' },
+                            { id: 'improvedUnderstanding', label: 'Improved Understanding?' },
+                            { id: 'providedExperiences', label: 'Provided Experience?' },
+                          ].map(item => (
+                            <div key={item.id} className="space-y-2">
+                              <label className="text-xs font-bold text-slate-500 uppercase">{item.label}</label>
+                              <select
+                                className="w-full h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                                value={assessment[item.id as keyof AssessmentData] as string || ""}
+                                onChange={(e) => setAssessment({ ...assessment, [item.id]: e.target.value })}
+                              >
+                                <option value="" disabled>Select...</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                              </select>
+                            </div>
+                          ))}
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase">LO Visit Count</label>
+                            <Input
+                              type="number" min="0"
+                              className="h-11 font-bold text-sm"
+                              value={assessment.loVisitCount || 0}
+                              onChange={(e) => setAssessment({ ...assessment, loVisitCount: Number(e.target.value) })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Satisfaction Matrix</label>
+                          {[
+                            { id: 'satisfactionIndustry', label: 'Satisfaction with Industry' },
+                            { id: 'satisfactionMajor', label: 'Satisfaction with Major' },
+                            { id: 'satisfactionPractical', label: 'Satisfaction with Practical Work' },
+                            { id: 'satisfactionInstructors', label: 'Satisfaction with Instructors' },
+                          ].map(item => (
+                            <div key={item.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <span className="text-sm font-bold text-slate-700">{item.label}</span>
+                              <select
+                                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 w-32"
+                                value={assessment[item.id as keyof AssessmentData] as string || ""}
+                                onChange={(e) => setAssessment({ ...assessment, [item.id]: e.target.value })}
+                              >
+                                <option value="" disabled>-</option>
+                                <option value="Excellent">Excellent</option>
+                                <option value="Average">Average</option>
+                                <option value="Poor">Poor</option>
+                              </select>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="space-y-4 pt-2">
+                          <label className="text-xs font-bold text-slate-500 uppercase block">Programme Checklists (Optional Details)</label>
+                          <textarea
+                            placeholder="Any other programme details completed..."
+                            className="w-full h-[80px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none resize-none transition-all"
+                            value={assessment.otherProgrammeDetails || ""}
+                            onChange={(e) => setAssessment({ ...assessment, otherProgrammeDetails: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase block">Notable Achievements</label>
+                            <textarea
+                              placeholder="List achievements..."
+                              className="w-full h-[80px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none resize-none transition-all"
+                              value={assessment.notableAchievements || ""}
+                              onChange={(e) => setAssessment({ ...assessment, notableAchievements: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase block">Suggestions</label>
+                            <textarea
+                              placeholder="Provide suggestions..."
+                              className="w-full h-[80px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none resize-none transition-all"
+                              value={assessment.suggestions || ""}
+                              onChange={(e) => setAssessment({ ...assessment, suggestions: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Footer: Overview */}
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                          <div className="h-8 w-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm">
+                            <MessageSquare className="h-4 w-4" />
+                          </div>
+                          <h4 className="font-black text-slate-800 uppercase tracking-tight text-sm">Overall Review</h4>
+                        </div>
+                        <textarea
+                          placeholder="Write a formal professional review of the student's performance..."
+                          className="w-full h-[140px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none transition-all"
+                          value={assessment.comment}
+                          onChange={(e) => setAssessment({ ...assessment, comment: e.target.value })}
+                        />
+                        <div className="p-4 rounded-2xl bg-slate-900 text-white flex justify-between items-center shadow-xl">
+                          <div>
+                            <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Total Assessment Score</p>
+                            <p className="text-2xl font-black">
+                              {assessment.knowledgeWirelessOps + assessment.knowledgeWirelessEst + assessment.knowledgeWirelessMaint + assessment.knowledgeApplication +
+                                assessment.responsibility + assessment.cooperativeness + assessment.complianceEtiquette +
+                                assessment.safetyAwareness + assessment.safetyCompliance + assessment.safetyArrangement} / 100
+                            </p>
+                          </div>
+                          <div className="h-10 w-10 rounded-full border-2 border-white/20 flex items-center justify-center font-black text-xs">
+                            {(assessment.knowledgeWirelessOps + assessment.knowledgeWirelessEst + assessment.knowledgeWirelessMaint + assessment.knowledgeApplication +
+                              assessment.responsibility + assessment.cooperativeness + assessment.complianceEtiquette +
+                              assessment.safetyAwareness + assessment.safetyCompliance + assessment.safetyArrangement) >= 80 ? 'EX' :
+                              (assessment.knowledgeWirelessOps + assessment.knowledgeWirelessEst + assessment.knowledgeWirelessMaint + assessment.knowledgeApplication +
+                                assessment.responsibility + assessment.cooperativeness + assessment.complianceEtiquette +
+                                assessment.safetyAwareness + assessment.safetyCompliance + assessment.safetyArrangement) >= 60 ? 'GD' : 'NI'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
-
-                <div>
-                  <label className="text-sm font-medium text-primary mb-3 block">Overall Rating (1-10)</label>
-                  <input
-                    type="range"
-                    min={1}
-                    max={10}
-                    value={ratingValue}
-                    className="w-full accent-primary"
-                    onChange={(e) => setRatingValue(Number(e.target.value))}
-                  />
-                  <div className="flex justify-between text-xs text-primary mt-1">
-                    <span>Poor (1)</span>
-                    <span>Excellent (10)</span>
-                  </div>
-                  <p className="text-center text-sm text-primary mt-2">Selected: {ratingValue}</p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-primary mb-2 block">Comments</label>
-                  <textarea
-                    placeholder="Optional feedback..."
-                    className="w-full rounded-lg border border-primary/20 bg-white px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary min-h-20"
-                    value={ratingComment}
-                    onChange={(e) => setRatingComment(e.target.value)}
-                  />
-                </div>
               </div>
 
-              <div className="p-6 bg-primary/5 border-t border-primary/10 flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setShowRatingModal(false)}>Cancel</Button>
+              <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
+                <Button variant="ghost" className="font-bold cursor-pointer" onClick={() => setShowRatingModal(false)}>Cancel</Button>
                 <Button
-                  onClick={handleRateTask}
-                  className="bg-primary hover:bg-primary/90 text-white"
+                  onClick={selectedTask ? handleRateTask : handleSaveAssessment}
+                  className="bg-primary hover:bg-primary/90 text-white font-black px-8 rounded-xl shadow-lg shadow-primary/25 cursor-pointer"
+                  disabled={isSaving}
                 >
-                  <Check className="h-4 w-4 mr-2" /> Submit Rating
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                  {selectedTask ? "Confirm Rating" : "Finalize & Sync Assessment"}
                 </Button>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -856,7 +1303,7 @@ export default function SupervisorDashboard() {
             exit={{ opacity: 0, scale: 0.95 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
           >
-            <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
               <div className="p-6 border-b border-primary/10 flex items-center justify-between">
                 <h3 className="text-xl font-bold text-primary">Student Profile</h3>
                 <button
@@ -867,48 +1314,52 @@ export default function SupervisorDashboard() {
                 </button>
               </div>
 
-              <div className="p-6 space-y-6">
-                <div className="text-center mb-6">
-                  <div className="h-20 w-20 rounded-full bg-primary/10 mx-auto flex items-center justify-center text-2xl font-bold text-primary mb-3">
+              <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                <div className="text-center">
+                  <div className="h-24 w-24 rounded-3xl bg-primary/5 mx-auto flex items-center justify-center text-3xl font-black text-primary mb-4 shadow-sm border border-primary/10">
                     {selectedStudent.user?.name?.split(" ").map((n) => n[0]).join("") || "ST"}
                   </div>
-                  <h4 className="font-bold text-lg text-primary">{selectedStudent.user?.name}</h4>
-                  <p className="text-sm text-primary/60">{selectedStudent.user?.email}</p>
+                  <h4 className="font-black text-2xl text-slate-900 select-all">{selectedStudent.user?.name}</h4>
+                  <p className="text-sm font-bold text-primary/60 tracking-wider uppercase mt-1">Student Intern Portfolio</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="text-xs font-semibold text-primary/60 uppercase tracking-wider">Contact Info</label>
-                    <div className="mt-1 p-3 bg-neutral/5 rounded-lg">
-                      <p className="text-sm text-primary flex items-center gap-2">
-                        <span className="font-medium">Phone:</span> {selectedStudent.phone || "N/A"}
-                      </p>
-                      <p className="text-sm text-primary flex items-center gap-2 mt-1">
-                        <span className="font-medium">Address:</span> {selectedStudent.address || "N/A"}
-                      </p>
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Digital credentials</label>
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-500">Email Address</span>
+                        <span className="text-sm font-bold text-slate-900 select-all">{selectedStudent.user?.email}</span>
+                      </div>
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-200/50">
+                        <span className="text-xs font-bold text-slate-500">Contact Number</span>
+                        <span className="text-sm font-bold text-slate-900 select-all">{selectedStudent.phone || "N/A"}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="col-span-2">
-                    <label className="text-xs font-semibold text-primary/60 uppercase tracking-wider">Internship Placement</label>
-                    <div className="mt-1 p-3 bg-neutral/5 rounded-lg">
-                      <p className="text-sm text-primary font-bold">{selectedStudent.companyName || "No Company Assigned"}</p>
-                      <p className="text-sm text-primary/80">{selectedStudent.companyAddress}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-primary/60 uppercase tracking-wider">Field Supervisor</label>
-                    <div className="mt-1 p-3 bg-neutral/5 rounded-lg">
-                      <p className="text-sm text-primary font-medium">{selectedStudent.supervisorName || "N/A"}</p>
-                      <p className="text-xs text-primary/60">{selectedStudent.supervisorEmail}</p>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Placement Verification</label>
+                    <div className="p-5 bg-linear-to-br from-primary to-slate-800 rounded-2xl text-white shadow-lg shadow-primary/20">
+                      <p className="text-lg font-black">{selectedStudent.companyName || "No Company Assigned"}</p>
+                      <p className="text-xs font-medium text-white/70 mt-1">{selectedStudent.companyAddress}</p>
+                      <div className="mt-4 flex gap-4 border-t border-white/10 pt-4">
+                        <div>
+                          <p className="text-[8px] font-black uppercase text-white/50">Supervisor</p>
+                          <p className="text-xs font-bold">{selectedStudent.supervisorName || "N/A"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[8px] font-black uppercase text-white/50">LO Assigned</p>
+                          <p className="text-xs font-bold">{selectedStudent.liaisonOfficerName || "None"}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="p-6 bg-primary/5 border-t border-primary/10 flex justify-end">
-                <Button onClick={() => setShowProfileModal(false)}>Close</Button>
+              <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex justify-end">
+                <Button className="font-black px-6 rounded-xl cursor-pointer" onClick={() => setShowProfileModal(false)}>Acknowledge</Button>
               </div>
             </div>
           </motion.div>

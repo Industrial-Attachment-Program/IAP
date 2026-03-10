@@ -34,8 +34,10 @@ export default function NotificationsPage() {
 
     const fetchNotifications = async (userId: number) => {
         try {
-            const data = await apiFetch(`/notifications`);
-            setNotifications(data || []);
+            const result = await apiFetch(`/notifications`);
+            if (result.ok) {
+                setNotifications(result.data.notifications || []);
+            }
         } catch (error) {
             console.error("Error fetching notifications:", error);
         } finally {
