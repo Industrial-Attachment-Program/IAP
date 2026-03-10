@@ -302,9 +302,11 @@ export class WeeklyLogsService {
         });
 
         if (existing) {
+            // Exclude fields that shouldn't be updated
+            const { id, createdAt, updatedAt, dailyEntries, ...updateData } = rest;
             return this.prisma.weeklyLog.update({
                 where: { id: existing.id },
-                data: { ...rest },
+                data: updateData,
             });
         }
 
