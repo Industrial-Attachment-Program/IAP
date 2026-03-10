@@ -82,35 +82,31 @@ export default function LiaisonDashboard() {
 
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
-        const token = localStorage.getItem("token");
-
-        if (!storedUser || !token) {
-            router.replace("/login");
-            return;
-        }
+        if (!storedUser) return; // MainLayout handles login redirect
 
         try {
             const user = JSON.parse(storedUser);
             setUserName(user.name);
+            const userRole = user.role?.toUpperCase();
+            const userLiaisonId = Number(user.liaisonId || user.id);
 
-            if (user.role === "LIAISON" && user.liaisonProfile?.id !== liaisonId) {
-                router.replace("/login");
-                return;
+            // Only proceed if authorized for this page, but don't redirect (MainLayout does that)
+            if (userRole === "ADMIN" || (userRole === "LIAISON" && userLiaisonId === liaisonId)) {
+                setIsAuthorized(true);
             }
-            if (user.role !== "LIAISON" && user.role !== "ADMIN") {
-                router.replace("/login");
-                return;
-            }
-            setIsAuthorized(true);
         } catch (e) {
-            router.replace("/login");
+            console.error("LiaisonDashboard: Auth parse failed", e);
         }
     }, [liaisonId, router]);
 
     const fetchStudents = async () => {
         try {
-            const data = await apiFetch(`/students?liaisonId=${liaisonId}`);
-            setStudents(data.students || []);
+            const result = await apiFetch(`/students?liaisonId=${liaisonId}`);
+            if (result.ok) {
+                setStudents(result.data.students || []);
+            } else {
+                console.error("Error fetching students:", result.error);
+            }
         } catch (error) {
             console.error("Error fetching students:", error);
         }
@@ -118,8 +114,12 @@ export default function LiaisonDashboard() {
 
     const fetchWeeklyLogs = async () => {
         try {
-            const data = await apiFetch(`/weekly-logs?liaisonId=${liaisonId}`);
-            setWeeklyLogs(data.logs || []);
+            const result = await apiFetch(`/weekly-logs?liaisonId=${liaisonId}`);
+            if (result.ok) {
+                setWeeklyLogs(result.data.logs || []);
+            } else {
+                console.error("Error fetching weekly logs:", result.error);
+            }
         } catch (error) {
             console.error("Error fetching weekly logs:", error);
         }
@@ -416,10 +416,22 @@ export default function LiaisonDashboard() {
                                             </div>
                                         </div>
 
-                                        <div className="mt-auto">
+                                        <div className="mt-auto flex justify-between gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="font-bold shadow-sm"
+                                                onClick={() => {
+                                                    const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:2009/api";
+                                                    window.open(`${base}/weekly-logs/${log.id}/pdf`, "_blank");
+                                                }}
+                                            >
+                                                Download PDF
+                                            </Button>
                                             <Button
                                                 variant="primary"
-                                                className="w-full font-bold shadow-sm"
+                                                size="sm"
+                                                className="flex-1 font-bold shadow-sm"
                                                 onClick={() => {
                                                     setSelectedWeeklyLog(log);
                                                     setShowReviewModal(true);

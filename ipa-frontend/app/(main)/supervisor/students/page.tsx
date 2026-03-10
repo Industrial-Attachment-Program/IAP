@@ -58,14 +58,22 @@ export default function SupervisorStudentsPage() {
             try {
                 const user = JSON.parse(storedUser);
                 const supId = user.supervisorId || user.supervisorProfile?.id;
+
                 if (supId) {
                     setSupervisorId(supId);
                     apiFetch(`/students?supervisorId=${supId}`)
-                        .then(data => {
-                            setStudents(data.students || []);
+                        .then(result => {
+                            if (result.ok) {
+                                setStudents(result.data.students || []);
+                            } else {
+                                console.error("Error fetching students:", result.error);
+                            }
                             setLoading(false);
                         })
-                        .catch(err => console.error(err));
+                        .catch(err => {
+                            console.error(err);
+                            setLoading(false);
+                        });
                 }
             } catch (e) {
                 console.error("Error parsing user from localStorage", e);
@@ -82,15 +90,19 @@ export default function SupervisorStudentsPage() {
 
     const fetchTasks = async (studentId: number) => {
         try {
-            const data = await apiFetch(`/tasks?studentId=${studentId}`);
-            setTasks(data.tasks || []);
+            const result = await apiFetch(`/tasks?studentId=${studentId}`);
+            if (result.ok) {
+                setTasks(result.data.tasks || []);
+            }
         } catch (err) { console.error(err); }
     };
 
     const fetchLogs = async (studentId: number) => {
         try {
-            const data = await apiFetch(`/daily-log?studentId=${studentId}`);
-            setLogs(data.logs || []);
+            const result = await apiFetch(`/daily-log?studentId=${studentId}`);
+            if (result.ok) {
+                setLogs(result.data.logs || []);
+            }
         } catch (err) { console.error(err); }
     };
 

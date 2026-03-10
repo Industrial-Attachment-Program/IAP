@@ -21,6 +21,12 @@ interface Student {
             name: string;
         }
     };
+    liaison?: {
+        id: number;
+        user: {
+            name: string;
+        }
+    };
 }
 
 interface ActivityItem {
@@ -42,6 +48,14 @@ interface Supervisor {
     };
 }
 
+interface Liaison {
+    id: number;
+    user: {
+        name: string;
+        email: string;
+    };
+}
+
 export default function AdminDashboard() {
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
@@ -55,12 +69,13 @@ export default function AdminDashboard() {
     const [createError, setCreateError] = useState<string | null>(null);
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
-    const [assigningSupervisor, setAssigningSupervisor] = useState<string | null>(null);
+    const [liaisons, setLiaisons] = useState<Liaison[]>([]);
+    const [assigningRole, setAssigningRole] = useState<{ id: string, role: 'supervisor' | 'liaison' } | null>(null);
 
     const [newUser, setNewUser] = useState({
         name: "",
         email: "",
-        role: "SUPERVISOR" as "SUPERVISOR" | "ADMIN",
+        role: "SUPERVISOR" as "SUPERVISOR" | "ADMIN" | "LIAISON",
         phone: "",
         department: "",
         password: "",
@@ -70,12 +85,30 @@ export default function AdminDashboard() {
         fetchStudents();
         fetchActivities();
         fetchSupervisors();
+        fetchLiaisons();
     }, []);
+
+    const fetchLiaisons = async () => {
+        try {
+            const result = await apiFetch("/liaisons") as any;
+            if (result.ok) {
+                setLiaisons(result.data.liaisons || []);
+            } else {
+                console.error("Error fetching liaisons:", result.error);
+            }
+        } catch (error) {
+            console.error("Error fetching liaisons:", error);
+        }
+    };
 
     const fetchActivities = async () => {
         try {
-            const data = await apiFetch("/admin/activity");
-            setActivities(data.activities || []);
+            const result = await apiFetch("/admin/activity") as any;
+            if (result.ok) {
+                setActivities(result.data.activities || []);
+            } else {
+                console.error("Error fetching activities:", result.error);
+            }
         } catch (error) {
             console.error("Error fetching activities:", error);
         }
@@ -83,37 +116,46 @@ export default function AdminDashboard() {
 
     const fetchSupervisors = async () => {
         try {
-            const data = await apiFetch("/supervisors");
-            setSupervisors(data.supervisors || []);
+            const result = await apiFetch("/supervisors") as any;
+            if (result.ok) {
+                setSupervisors(result.data.supervisors || []);
+            } else {
+                console.error("Error fetching supervisors:", result.error);
+            }
         } catch (error) {
             console.error("Error fetching supervisors:", error);
         }
     };
 
-    const handleAssignSupervisor = async (studentId: string, supervisorId: string) => {
-        setAssigningSupervisor(studentId);
+    const handleAssignRole = async (studentId: string, roleId: string, role: 'supervisor' | 'liaison') => {
+        setAssigningRole({ id: studentId, role });
         try {
+            const body = role === 'supervisor' ? { supervisorId: roleId } : { liaisonId: roleId };
             await apiFetch(`/students/${studentId}`, {
                 method: "PATCH",
-                body: JSON.stringify({ supervisorId }),
+                body: JSON.stringify(body),
             });
             fetchStudents();
         } catch (error) {
-            console.error("Error assigning supervisor:", error);
+            console.error(`Error assigning ${role}:`, error);
         } finally {
-            setAssigningSupervisor(null);
+            setAssigningRole(null);
         }
     };
 
     const fetchStudents = async () => {
         try {
-            const data = await apiFetch("/students");
-            const normalizedStudents =
-                (data.students || []).map((student: any) => ({
-                    ...student,
-                    studentId: student.studentId ?? student.studentNumber ?? "",
-                }));
-            setStudents(normalizedStudents);
+            const result = await apiFetch("/students");
+            if (result.ok) {
+                const normalizedStudents =
+                    (result.data.students || []).map((student: any) => ({
+                        ...student,
+                        studentId: student.studentId ?? student.studentNumber ?? "",
+                    }));
+                setStudents(normalizedStudents);
+            } else {
+                console.error("Error fetching students:", result.error);
+            }
         } catch (error) {
             console.error("Error fetching students:", error);
         } finally {
@@ -128,20 +170,24 @@ export default function AdminDashboard() {
         setCreateError(null);
 
         try {
-            const data = await apiFetch("/admin/add-user", {
+            const result = await apiFetch("/admin/add-user", {
                 method: "POST",
                 body: JSON.stringify(newUser),
-            });
+            }) as any;
 
-            setCreateMessage("User created successfully");
-            setNewUser({
-                name: "",
-                email: "",
-                role: newUser.role,
-                phone: "",
-                department: "",
-                password: "",
-            });
+            if (result.ok) {
+                setCreateMessage("User created successfully");
+                setNewUser({
+                    name: "",
+                    email: "",
+                    role: newUser.role,
+                    phone: "",
+                    department: "",
+                    password: "",
+                });
+            } else {
+                setCreateError(result.error || "Failed to create user");
+            }
         } catch (err: any) {
             console.error("Error creating user:", err);
             setCreateError(err.message || "Failed to create user");
@@ -161,19 +207,23 @@ export default function AdminDashboard() {
             const formData = new FormData();
             formData.append("file", file);
 
-            const data = await apiFetch("/students/upload", {
+            const result = await apiFetch("/students/upload", {
                 method: "POST",
                 body: formData,
-            });
+            }) as any;
 
-            setUploadResult({
-                success: data.success || 0,
-                errors: data.errors || [],
-            });
+            if (result.ok) {
+                const data = result.data;
+                setUploadResult({
+                    success: data?.success || 0,
+                    errors: data?.errors || [],
+                });
 
-
-            if (data.success > 0) {
-                fetchStudents();
+                if (data?.success > 0) {
+                    fetchStudents();
+                }
+            } else {
+                setUploadResult({ error: result.error || "Failed to upload file" });
             }
         } catch (error: any) {
             console.error("Error uploading file:", error);
@@ -193,17 +243,22 @@ export default function AdminDashboard() {
         setSendingInvites(true);
 
         try {
-            const data = await apiFetch("/students/send-invites", {
+            const result = await apiFetch("/students/send-invites", {
                 method: "POST",
                 body: JSON.stringify({ studentIds: idsToSend }),
-            });
+            }) as any;
 
-            if (data.success > 0) {
-                alert(`Successfully sent ${data.success} invitation(s)!`);
-                setSelectedStudents(new Set());
-                fetchStudents();
+            if (result.ok) {
+                const data = result.data;
+                if (data?.success > 0) {
+                    alert(`Successfully sent ${data.success} invitation(s)!`);
+                    setSelectedStudents(new Set());
+                    fetchStudents();
+                } else {
+                    alert(`Failed to send invitations: ${data?.results?.errors?.[0]?.error || "Unknown error"}`);
+                }
             } else {
-                alert(`Failed to send invitations: ${data.results?.errors?.[0]?.error || "Unknown error"}`);
+                alert(`Error: ${result.error || "Failed to send invites"}`);
             }
         } catch (error: any) {
             console.error("Error sending invites:", error);
@@ -285,10 +340,10 @@ export default function AdminDashboard() {
                         color: "text-primary",
                     },
                     {
-                        label: "Total Supervisors",
-                        value: String(supervisors.length),
-                        sub: "Managed from Add User section below",
-                        icon: TrendingUp,
+                        label: "Liaison Officers",
+                        value: String(liaisons.length),
+                        sub: "Verify student work and progress",
+                        icon: UserPlus,
                         color: "text-primary",
                     },
                 ].map((stat, index) => (
@@ -416,11 +471,12 @@ export default function AdminDashboard() {
                                     onChange={(e) =>
                                         setNewUser((u) => ({
                                             ...u,
-                                            role: e.target.value as "SUPERVISOR" | "ADMIN",
+                                            role: e.target.value as "SUPERVISOR" | "ADMIN" | "LIAISON",
                                         }))
                                     }
                                 >
                                     <option value="SUPERVISOR">Supervisor</option>
+                                    <option value="LIAISON">Liaison Officer</option>
                                     <option value="ADMIN">Admin</option>
                                 </select>
                             </div>
@@ -529,6 +585,7 @@ export default function AdminDashboard() {
                                             <th className="px-6 py-3">Email</th>
                                             <th className="px-6 py-3">Student ID</th>
                                             <th className="px-6 py-3">Supervisor</th>
+                                            <th className="px-6 py-3">Liaison</th>
                                             <th className="px-6 py-3">Status</th>
                                             <th className="px-6 py-3 text-right">Actions</th>
                                         </tr>
@@ -553,7 +610,7 @@ export default function AdminDashboard() {
                                                 <td className="px-6 py-4 text-primary">{student.user.email}</td>
                                                 <td className="px-6 py-4 text-primary">{student.studentId}</td>
                                                 <td className="px-6 py-4">
-                                                    <select className="bg-white border border-primary/20 text-primary text-xs rounded p-1 max-w-[150px]" value={student.supervisor?.id ?? ""} onChange={(e) => handleAssignSupervisor(student.id, e.target.value)}>
+                                                    <select className="bg-white border border-primary/20 text-primary text-xs rounded p-1 max-w-[150px]" value={student.supervisor?.id ?? ""} onChange={(e) => handleAssignRole(student.id, e.target.value, 'supervisor')}>
                                                         <option value="" disabled>
                                                             Select Supervisor
                                                         </option>
@@ -563,7 +620,20 @@ export default function AdminDashboard() {
                                                             </option>
                                                         ))}
                                                     </select>
-                                                    {assigningSupervisor === student.id && <Loader2 className="h-3 w-3 inline ml-2 animate-spin text-primary" />}
+                                                    {assigningRole?.id === student.id && assigningRole.role === 'supervisor' && <Loader2 className="h-3 w-3 inline ml-2 animate-spin text-primary" />}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <select className="bg-white border border-primary/20 text-primary text-xs rounded p-1 max-w-[150px]" value={student.liaison?.id ?? ""} onChange={(e) => handleAssignRole(student.id, e.target.value, 'liaison')}>
+                                                        <option value="" disabled>
+                                                            Select Liaison
+                                                        </option>
+                                                        {liaisons.map((l) => (
+                                                            <option key={l.id} value={l.id}>
+                                                                {l.user.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    {assigningRole?.id === student.id && assigningRole.role === 'liaison' && <Loader2 className="h-3 w-3 inline ml-2 animate-spin text-primary" />}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {student.profileCompleted ? (

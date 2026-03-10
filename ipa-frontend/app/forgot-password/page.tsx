@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
                     <div>
                         <Link href="/" className="inline-flex items-center gap-3 group">
                             <div>
-                                <div className="text-white font-black text-xl leading-none">IPA System</div>
+                                <div className="text-white font-black text-xl leading-none">IAP System</div>
                             </div>
                         </Link>
                     </div>
@@ -162,7 +162,7 @@ export default function ForgotPasswordPage() {
                                 <form onSubmit={handleSubmit} className="space-y-5">
                                     <div className="space-y-2">
                                         <label className="text-lg font-semibold text-primary/40">
-                                            Email Address
+                                            Email Address:
                                         </label>
                                         <div className="relative group">
                                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/25 group-focus-within:text-primary/60 transition-colors" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Mail, ArrowRight, Loader2, Eye, EyeOff, ChevronRight } from "lucide-react";
@@ -17,9 +17,9 @@ export default function LoginPage() {
     const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,35 +27,43 @@ export default function LoginPage() {
         setError("");
 
         try {
-            const data = await apiFetch("/auth/login", {
+            const result = await apiFetch("/auth/login", {
                 method: "POST",
                 body: JSON.stringify({ email, password }),
             });
 
-            if (data.user) {
+            if (!result.ok) {
+                setError(result.error || "Invalid credentials. Please try again.");
+                return;
+            }
+
+            const { data } = result;
+
+            if (data?.user) {
                 const user = data.user;
                 localStorage.setItem("user", JSON.stringify(user));
                 localStorage.setItem("token", data.token || "");
 
-                const { role, profileCompleted, id, studentId, supervisorId } = user;
+                const role = user.role?.toUpperCase();
+                const sid = user.studentId || user.supervisorId || user.liaisonId || user.id;
 
                 if (role === "ADMIN") {
                     router.push("/admin");
                 } else if (role === "SUPERVISOR") {
-                    const sid = supervisorId || user.supervisorProfile?.id || id;
                     router.push(`/supervisor/${sid}`);
+                } else if (role === "LIAISON") {
+                    router.push(`/liaison/${sid}`);
                 } else if (role === "STUDENT") {
-                    const sid = studentId || user.studentProfile?.id || id;
                     if (!sid) {
                         setError("Student profile not found. Please contact admin.");
                         return;
                     }
 
-                    if (user.studentProfile?.id) {
-                        localStorage.setItem("studentProfileId", String(user.studentProfile.id));
+                    if (user.studentId || user.studentProfile?.id) {
+                        localStorage.setItem("studentProfileId", String(user.studentId || user.studentProfile.id));
                     }
 
-                    if (profileCompleted || user.studentProfile?.profileCompleted) {
+                    if (user.profileCompleted || user.studentProfile?.profileCompleted) {
                         router.push(`/student/${sid}`);
                     } else {
                         router.push(`/complete-profile?token=login_${sid}`);
@@ -63,6 +71,8 @@ export default function LoginPage() {
                 } else {
                     router.push("/login");
                 }
+            } else {
+                setError("Unexpected response from server.");
             }
         } catch (err: any) {
             setError(err.message || "Invalid credentials. Please try again.");
@@ -93,7 +103,7 @@ export default function LoginPage() {
                     <div>
                         <Link href="/" className="inline-flex items-center gap-3 group">
                             <div>
-                                <div className="text-white font-black text-xl leading-none">IPA System</div>
+                                <div className="text-white font-black text-xl leading-none">IAP System</div>
                             </div>
                         </Link>
                     </div>
@@ -152,10 +162,7 @@ export default function LoginPage() {
                 {/* Mobile brand */}
                 <div className="absolute top-6 left-6 lg:hidden">
                     <Link href="/" className="inline-flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                            <span className="text-white font-black text-xs">IA</span>
-                        </div>
-                        <span className="font-black text-primary text-sm">IPA Portal</span>
+                        <span className="font-black text-primary text-sm">IAP Portal</span>
                     </Link>
                 </div>
 
@@ -194,7 +201,7 @@ export default function LoginPage() {
                         {/* Email */}
                         <div className="space-y-2">
                             <label className="text-lg font-semibold text-primary/40">
-                                Email Address
+                                Email Address:
                             </label>
                             <div className="relative group">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/25 group-focus-within:text-primary/60 transition-colors" />
@@ -214,7 +221,7 @@ export default function LoginPage() {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-lg font-semibold text-primary/40">
-                                    Password
+                                    Password:
                                 </label>
                                 <Link href="/forgot-password" className="text-[12px] font-semibold text-primary/40 hover:text-primary transition-colors">
                                     Forgot Password?

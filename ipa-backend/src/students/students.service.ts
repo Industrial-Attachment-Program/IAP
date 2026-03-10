@@ -27,6 +27,12 @@ export class StudentsService {
                     },
                     supervisor: { include: { user: true } },
                     liaison: { include: { user: true } },
+                    ratings: {
+                        include: {
+                            supervisor: { include: { user: { select: { name: true } } } }
+                        },
+                        orderBy: { createdAt: 'desc' },
+                    },
                 },
             });
 
@@ -34,7 +40,12 @@ export class StudentsService {
                 throw new NotFoundException('Student not found');
             }
 
-            return { student };
+            return {
+                student: {
+                    ...student,
+                    loAssigned: !!student.liaisonId,
+                }
+            };
         }
 
         const limit = parseInt(limitParam || '1000');
@@ -52,11 +63,20 @@ export class StudentsService {
                 user: { select: { id: true, name: true, email: true } },
                 supervisor: { include: { user: true } },
                 liaison: { include: { user: true } },
+                ratings: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1
+                }
             },
             orderBy: { createdAt: 'desc' },
         });
 
-        return { students };
+        const studentsWithLo = students.map(s => ({
+            ...s,
+            loAssigned: !!s.liaisonId
+        }));
+
+        return { students: studentsWithLo };
     }
 
     async findOne(id: number) {
@@ -68,7 +88,9 @@ export class StudentsService {
                 },
                 supervisor: { include: { user: true } },
                 liaison: { include: { user: true } },
-                ratings: true,
+                ratings: {
+                    orderBy: { createdAt: 'desc' },
+                },
             },
         });
 
@@ -76,7 +98,10 @@ export class StudentsService {
             throw new NotFoundException('Student not found');
         }
 
-        return student;
+        return {
+            ...student,
+            loAssigned: !!student.liaisonId,
+        };
     }
 
     async updateProfile(studentId: number, body: any) {
@@ -92,7 +117,8 @@ export class StudentsService {
             supervisorName, supervisorDesignation, supervisorEmail,
             supervisorDepartment, supervisorPhone,
             liaisonOfficerName, liaisonOfficerPhone,
-            internshipStart, internshipEnd, supervisorId
+            internshipStart, internshipEnd, supervisorId, liaisonId,
+            absentDays
         } = body;
 
         const updateData: any = {
@@ -106,10 +132,15 @@ export class StudentsService {
             internshipStart: internshipStart ? new Date(internshipStart) : null,
             internshipEnd: internshipEnd ? new Date(internshipEnd) : null,
             profileCompleted: true,
+            absentDays: absentDays !== undefined ? Number(absentDays) : undefined,
         };
 
         if (supervisorId) {
             updateData.supervisorId = Number(supervisorId);
+        }
+
+        if (liaisonId) {
+            updateData.liaisonId = Number(liaisonId);
         }
 
         const updatedStudent = await this.prisma.student.update({
@@ -200,8 +231,6 @@ export class StudentsService {
             profileToken: null,
         };
 
-        // Filter out undefined fields to avoid overwriting with null if they are not in the body
-        // This is important for partial updates where some fields might not be provided.
         Object.keys(updateData).forEach(key => (updateData[key] === undefined) && delete updateData[key]);
 
         const updatedStudent = await this.prisma.student.update({

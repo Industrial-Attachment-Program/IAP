@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock,  CheckCircle2, Upload, X, Users, ArrowRight, Settings, Check, FileText } from "lucide-react";
+import { Clock, CheckCircle2, Upload, X, Users, ArrowRight, Settings, Check, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import toast from "react-hot-toast";
@@ -56,37 +56,36 @@ export default function StudentDashboard() {
         }
 
         const storedUser = localStorage.getItem("user");
-        const token = localStorage.getItem("token");
-
-        if (!storedUser || !token) {
-            router.replace("/login");
-            return;
-        }
+        if (!storedUser) return; // MainLayout handles login redirect
 
         try {
             const user = JSON.parse(storedUser);
-            if (user.role === "STUDENT" && user.studentProfile?.id !== studentId) {
-                router.replace("/login");
-                return;
-            }
-            if (user.role !== "STUDENT" && user.role !== "ADMIN") {
-                router.replace("/login");
-                return;
-            }
+            const userRole = user.role?.toUpperCase();
 
-            // If we reach here, user is valid for this page
-            setIsAuthorized(true);
-            fetchStudent();
+            // Only proceed if authorized for this page, but don't redirect (MainLayout does that)
+            if (userRole === "ADMIN" || (userRole === "STUDENT" && user.studentProfile?.id === studentId)) {
+                setIsAuthorized(true);
+                fetchStudent();
+            }
         } catch (e) {
-            router.replace("/login");
-            return;
+            console.error("StudentDashboard: Auth parse failed", e);
         }
     }, [studentId, router]);
 
     const fetchStudent = async () => {
         try {
-            const data = await apiFetch(`/students?id=${studentId}`);
-            const s = data.student;
+            const result = await apiFetch(`/students?id=${studentId}`);
+            if (!result.ok) {
+                if (result.status === 404) {
+                    toast.error("Student not found");
+                    router.replace("/login");
+                    return;
+                }
+                toast.error(result.error || "Failed to load profile");
+                return;
+            }
+
+            const s = result.data.student;
             if (s) {
                 fetchTasks();
                 fetchWeeklyLogs();
@@ -136,8 +135,10 @@ export default function StudentDashboard() {
 
     const fetchTasks = async () => {
         try {
-            const data = await apiFetch(`/tasks?studentId=${studentId}`);
-            setTasks(data.tasks || []);
+            const result = await apiFetch(`/tasks?studentId=${studentId}`);
+            if (result.ok) {
+                setTasks(result.data.tasks || []);
+            }
         } catch (error) {
             console.error("Error fetching tasks:", error);
         } finally {
@@ -148,8 +149,10 @@ export default function StudentDashboard() {
 
     const fetchWeeklyLogs = async () => {
         try {
-            const data = await apiFetch(`/weekly-logs?studentId=${studentId}`);
-            setWeeklyLogs(data.logs || []);
+            const result = await apiFetch(`/weekly-logs?studentId=${studentId}`);
+            if (result.ok) {
+                setWeeklyLogs(result.data.logs || []);
+            }
         } catch (error) {
             console.error("Error fetching weekly logs:", error);
         }
@@ -251,7 +254,7 @@ export default function StudentDashboard() {
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
                                 <div className="space-y-1">
-                                    <p className="text-md font-semibold text-slate-400">{stat.label}</p>
+                                    <p className="text-md font-medium text-slate-400">{stat.label}</p>
                                     <p className="text-lg font-semibold text-slate-900">{stat.value}</p>
                                 </div>
                                 <div className={cn("p-4 rounded-2xl", stat.bg)}>

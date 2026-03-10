@@ -9,11 +9,13 @@ import {
     UseGuards,
     ParseIntPipe,
     Request,
+    Res,
 } from '@nestjs/common';
 import { WeeklyLogsService } from './weekly-logs.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import type { Response } from 'express';
 
 @Controller('weekly-logs')
 @UseGuards(JwtAuthGuard)
@@ -99,5 +101,19 @@ export class WeeklyLogsController {
         @Request() req: any,
     ) {
         return this.weeklyLogsService.verifyLiaison(id, req.user.userId, body);
+    }
+
+    @Get(':id/pdf')
+    @UseGuards(RolesGuard)
+    @Roles('SUPERVISOR', 'LIAISON')
+    async downloadPdf(
+        @Param('id', ParseIntPipe) id: number,
+        @Res() res: Response,
+        @Request() req: any,
+    ) {
+        const buffer = await this.weeklyLogsService.generatePdf(id, req.user);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="weekly-log-${id}.pdf"`);
+        res.send(buffer);
     }
 }

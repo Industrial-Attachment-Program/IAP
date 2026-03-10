@@ -48,14 +48,15 @@ export default function StudentTasksPage() {
     useEffect(() => {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
-            const user = JSON.parse(storedUser);
-            if (user.studentProfile?.id || user.studentId) {
-                setStudentId(user.studentProfile?.id || user.studentId);
-            } else {
-                router.push("/login");
+            try {
+                const user = JSON.parse(storedUser);
+                const sId = user.studentProfile?.id || user.studentId;
+                if (sId) {
+                    setStudentId(sId);
+                }
+            } catch (e) {
+                console.error("StudentTasksPage: Auth parse failed", e);
             }
-        } else {
-            router.push("/login");
         }
     }, [router]);
 
@@ -68,8 +69,10 @@ export default function StudentTasksPage() {
     const fetchTasks = async () => {
         setLoading(true);
         try {
-            const data = await apiFetch(`/tasks?studentId=${studentId}`);
-            setTasks(data.tasks || []);
+            const result = await apiFetch(`/tasks?studentId=${studentId}`);
+            if (result.ok) {
+                setTasks(result.data?.tasks || []);
+            }
         } catch (error) {
             console.error("Error fetching tasks:", error);
             toast.error("Failed to load tasks");

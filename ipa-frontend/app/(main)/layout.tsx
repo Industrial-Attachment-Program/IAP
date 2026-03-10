@@ -23,44 +23,92 @@ export default function MainLayout({
     else if (pathname.startsWith("/student")) role = "student";
 
     useEffect(() => {
-        const storedUser = localStorage.getItem("user");
-        const token = localStorage.getItem("token");
+        const checkAuth = async () => {
+            if (typeof window === "undefined") return;
 
-        if (!storedUser || !token) {
-            router.push("/login");
-            return;
-        }
+            const storedUser = localStorage.getItem("user");
+            const token = localStorage.getItem("token");
 
-        try {
-            const user = JSON.parse(storedUser);
-            const userRole = user.role?.toLowerCase();
-
-            if (pathname.startsWith("/admin") && userRole !== "admin") {
-                router.push("/login");
-                return;
-            }
-            if (pathname.startsWith("/supervisor") && userRole !== "supervisor") {
-                router.push("/login");
-                return;
-            }
-            if (pathname.startsWith("/liaison") && userRole !== "liaison") {
-                router.push("/login");
-                return;
-            }
-            if (pathname.startsWith("/student") && userRole !== "student") {
-                router.push("/login");
+            // Not logged in -> Handle Login Page or Root
+            if (!storedUser || !token) {
+                if (!pathname.includes("/login") && pathname !== "/") {
+                    router.replace("/login");
+                } else {
+                    setMounted(true);
+                }
                 return;
             }
 
-            setUserId(user.id);
-            setMounted(true);
+            try {
+                const user = JSON.parse(storedUser);
+                const userRole = user.role?.toUpperCase();
+                const sid = user.studentId || user.supervisorId || user.liaisonId || user.id;
 
-            apiFetch('/auth/me').catch(() => {});
+                if (!userRole) {
+                    localStorage.removeItem("user");
+                    localStorage.removeItem("token");
+                    router.replace("/login");
+                    return;
+                }
 
-        } catch (e) {
-            console.error("Auth hydration failed", e);
-            router.push("/login");
-        }
+                // If user visits "/", redirect to their dashboard
+                if (pathname === "/") {
+                    if (userRole === "ADMIN") router.replace("/admin");
+                    else if (userRole === "SUPERVISOR") router.replace(`/supervisor/${sid}`);
+                    else if (userRole === "LIAISON") router.replace(`/liaison/${sid}`);
+                    else if (userRole === "STUDENT") {
+                        if (user.profileCompleted || user.studentProfile?.profileCompleted) {
+                            router.replace(`/student/${sid}`);
+                        } else {
+                            router.replace(`/complete-profile?token=login_${sid}`);
+                        }
+                    }
+                    return;
+                }
+
+                // Check authorization for current path
+                const isAuthorized =
+                    (pathname.startsWith("/admin") && userRole === "ADMIN") ||
+                    (pathname.startsWith("/supervisor") && userRole === "SUPERVISOR") ||
+                    (pathname.startsWith("/liaison") && userRole === "LIAISON") ||
+                    (pathname.startsWith("/student") && userRole === "STUDENT") ||
+                    pathname === "/login" ||
+                    pathname === "/complete-profile" ||
+                    pathname.startsWith("/reset-password") ||
+                    pathname.startsWith("/forgot-password");
+
+                if (!isAuthorized) {
+                    if (userRole === "ADMIN") router.replace("/admin");
+                    else if (userRole === "SUPERVISOR") router.replace(`/supervisor/${sid}`);
+                    else if (userRole === "LIAISON") router.replace(`/liaison/${sid}`);
+                    else if (userRole === "STUDENT") router.replace(`/student/${sid}`);
+                    setMounted(true);
+                    return;
+                }
+
+                setUserId(user.id);
+                setMounted(true);
+
+                // Background session verification (Silent sync)
+                if (!pathname.includes("/login") && !pathname.includes("/complete-profile")) {
+                    apiFetch('/auth/me').then(res => {
+                        if (!res.ok && res.status === 401) {
+                            localStorage.removeItem("user");
+                            localStorage.removeItem("token");
+                            router.replace("/login");
+                        }
+                    }).catch(() => { });
+                }
+
+            } catch (e) {
+                console.error("Auth hydration failed", e);
+                localStorage.removeItem("user");
+                localStorage.removeItem("token");
+                router.replace("/login");
+            }
+        };
+
+        checkAuth();
     }, [pathname, router]);
 
     if (!mounted) return <div className="min-h-screen bg-background" />;

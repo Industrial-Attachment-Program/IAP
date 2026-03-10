@@ -30,28 +30,45 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
                 ? errorData.message[0]
                 : errorData.message || errorData.error || "An error occurred";
 
-            // Handle Unauthorized gracefully
-            if (response.status === 401) {
-                // Only destroy session if explicit auth check failed
-                if (endpoint === '/auth/me') {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
-                    if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-                        window.location.href = '/login';
-                    }
-                }
+            // Handle Unauthorized gracefully (let the caller handle redirection if needed)
+            if (response.status === 401 && endpoint === "/auth/me") {
+                // Return structured error but don't force a location.href reload
+                // which can be disruptive during navigation/refresh
+                return {
+                    ok: false,
+                    status: 401,
+                    error: "Session expired",
+                };
             }
 
-            throw new Error(errorMessage);
+            // Return a structured error instead of throwing
+            return {
+                ok: false,
+                status: response.status,
+                error: errorMessage,
+                data: errorData,
+            };
         }
 
-        return response.json();
+        const data = await response.json().catch(() => ({}));
+        return { ok: true, status: response.status, data };
     } catch (error: any) {
-        if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
-            console.error(`[apiFetch] Connection Refused: Ensure the backend is running at ${API_URL}`);
-            throw new Error("Unable to connect to the server. Please check if the backend is running.");
+        if (error.name === "TypeError" && error.message === "Failed to fetch") {
+            console.error(
+                `[apiFetch] Connection Refused: Ensure the backend is running at ${API_URL}`
+            );
+            return {
+                ok: false,
+                status: 0,
+                error:
+                    "Unable to connect to the server. Please check if the backend is running.",
+            };
         }
         console.error(`[apiFetch] Error fetching ${fullUrl}:`, error);
-        throw error;
+        return {
+            ok: false,
+            status: 0,
+            error: error?.message || "An unexpected error occurred",
+        };
     }
 }

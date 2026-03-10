@@ -12,7 +12,7 @@ import {
 import { apiFetch } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { toast, Toaster } from "react-hot-toast";
 import DOMPurify from "dompurify";
 
@@ -30,14 +30,14 @@ function Field({ label, value }: { label: string; value: string }) {
     );
 }
 
-function LogbookInput({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
+function LogbookInput({ label, value, onChange, type = "text" }: { label: string; value?: string; onChange: (v: string) => void; type?: string }) {
     return (
         <div className="space-y-2 group">
             <label className="text-xs font-semibold text-slate-500 group-hover:text-primary transition-colors">{label}</label>
             <input
                 type={type}
                 className="h-12 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm outline-none"
-                value={value || ""}
+                value={value ?? ""}
                 onChange={(e) => onChange(e.target.value)}
             />
         </div>
@@ -54,18 +54,18 @@ function StatusBadge({ status }: { status: string }) {
     );
 }
 
-function SurveyButton({ label, active, onClick, onDecline }: { label: string; active?: boolean; onClick: () => void; onDecline: () => void }) {
+function SurveyButton({ label, active, onClick, onDecline }: { label: string; active?: boolean | string; onClick: () => void; onDecline: () => void }) {
     return (
         <div className="flex flex-col gap-3 group">
             <span className="text-xs font-semibold text-slate-500 text-center group-hover:text-primary transition-colors">{label}</span>
             <div className="flex gap-3">
                 <button
                     onClick={onClick}
-                    className={`flex-1 h-12 rounded-lg font-bold text-sm transition-all border-2 ${active === true ? 'bg-primary border-primary text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-primary/50 hover:text-primary'}`}
+                    className={`flex-1 h-12 rounded-lg font-bold text-sm transition-all border-2 ${active === true || active === "Excellent" || active === "YES" ? 'bg-primary border-primary text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-primary/50 hover:text-primary'}`}
                 >Yes</button>
                 <button
                     onClick={onDecline}
-                    className={`flex-1 h-12 rounded-lg font-bold text-sm transition-all border-2 ${active === false ? 'bg-red-500 border-red-500 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-red-400 hover:text-red-500'}`}
+                    className={`flex-1 h-12 rounded-lg font-bold text-sm transition-all border-2 ${active === false || active === "Poor" || active === "NO" ? 'bg-red-500 border-red-500 text-white shadow-md' : 'bg-white border-slate-200 text-slate-500 hover:border-red-400 hover:text-red-500'}`}
                 >No</button>
             </div>
         </div>
@@ -114,6 +114,7 @@ interface IapReport {
     isUseful?: boolean;
     improvedUnderstanding?: boolean;
     providedExperiences?: boolean;
+    loVisitCount?: number;
     programmeTypes: string[];
     otherProgrammeDetails?: string;
     satisfactionIndustry?: 'Excellent' | 'Average' | 'Poor';
@@ -178,6 +179,7 @@ export default function StudentLogbookPage() {
 
     useEffect(() => {
         fetchData();
+        // Removed auto-refresh to prevent data loss while typing
     }, []);
 
     const fetchData = async () => {
@@ -185,17 +187,13 @@ export default function StudentLogbookPage() {
         try {
             const storedUserRaw = localStorage.getItem("user");
             if (!storedUserRaw || storedUserRaw === "{}") {
-                toast.error("Session trace lost. Please re-authenticate.");
-                window.location.href = "/login";
-                return;
+                return; // MainLayout handles redirect
             }
 
             const storedUser = JSON.parse(storedUserRaw);
             const studentId = storedUser.studentProfile?.id || storedUser.id;
 
             if (!studentId) {
-                toast.error("Profile synchronization error. Redirecting...");
-                window.location.href = "/login";
                 return;
             }
 
@@ -204,35 +202,48 @@ export default function StudentLogbookPage() {
             console.log("Fetching data for studentId:", studentId);
 
             try {
-                const studentData = await apiFetch(`/students/${studentId}`);
-                setStudent(studentData);
+                const result = await apiFetch(`/students/${studentId}`);
+                if (result.ok && result.data) {
+                    const studentData = result.data.student || result.data;
+                    setStudent({
+                        ...studentData,
+                        ratings: studentData.ratings || []
+                    });
+                }
             } catch (e: any) {
                 if (e.message !== 'Not Found' && e.message !== 'Student not found') {
                     console.error("Error fetching student:", e);
                     toast.error("Failed to load profile details");
-                } 
+                }
             }
 
             try {
-                const tasksData = await apiFetch(`/tasks?studentId=${studentId}`);
-                setTasks(tasksData.tasks || []);
+                const result = await apiFetch(`/tasks?studentId=${studentId}`);
+                if (result.ok) {
+                    setTasks(result.data?.tasks || []);
+                }
             } catch (e) {
                 console.error("Error fetching tasks:", e);
             }
 
             try {
-                const weeklyData = await apiFetch(`/weekly-logs?studentId=${studentId}`);
-                setWeeklyLogs(weeklyData.logs || []);
+                const result = await apiFetch(`/weekly-logs?studentId=${studentId}`);
+                if (result.ok) {
+                    setWeeklyLogs(result.data?.logs || []);
+                }
             } catch (e) {
                 console.error("Error fetching weekly logs:", e);
             }
 
             try {
-                const reportData = await apiFetch(`/iap-reports?studentId=${studentId}`);
-                if (reportData) setReport(reportData);
+                const result = await apiFetch(`/iap-reports?studentId=${studentId}`);
+                if (result.ok && result.data) {
+                    setReport(result.data);
+                }
             } catch (e) {
                 console.warn("No prior report found or fetch failed");
             }
+
 
         } catch (error) {
             console.error("General sync error:", error);
@@ -277,13 +288,16 @@ export default function StudentLogbookPage() {
         e.preventDefault();
         setIsSaving(true);
         try {
-            await apiFetch(`/students/${student.id}`, {
+            const result = await apiFetch(`/students/${student.id}`, {
                 method: "PATCH",
                 body: JSON.stringify(student)
             });
-            toast.success("Profile records updated");
-            // Refresh data to ensure internships dates are updated in the UI
-            fetchData();
+            if (result.ok) {
+                toast.success("Profile records updated");
+                fetchData();
+            } else {
+                toast.error(result.error || "Update failed");
+            }
         } catch (error) {
             toast.error("Update failed");
         } finally {
@@ -294,12 +308,16 @@ export default function StudentLogbookPage() {
     const handleSaveWeeklyLog = async (log: WeeklyLog) => {
         setIsSaving(true);
         try {
-            await apiFetch("/weekly-logs", {
+            const result = await apiFetch("/weekly-logs", {
                 method: "POST",
                 body: JSON.stringify({ ...log, studentId: student.id })
             });
-            toast.success(`Week ${log.weekNumber} activity synced`);
-            fetchData();
+            if (result.ok) {
+                toast.success(`Week ${log.weekNumber} activity synced`);
+                fetchData();
+            } else {
+                toast.error(result.error || "Synchronization failed");
+            }
         } catch (error) {
             toast.error("Synchronization failed");
         } finally {
@@ -307,15 +325,38 @@ export default function StudentLogbookPage() {
         }
     };
 
-    const handleSubmitWeeklyLog = async (logId: number) => {
+    const handleSubmitWeeklyLog = async (log: WeeklyLog) => {
         setIsSaving(true);
         try {
-            await apiFetch(`/weekly-logs/${logId}/status`, {
+            const saveResult = await apiFetch("/weekly-logs", {
+                method: "POST",
+                body: JSON.stringify({ ...log, studentId: student.id })
+            });
+
+            if (!saveResult.ok) {
+                toast.error("Failed to save log details before submission");
+                setIsSaving(false);
+                return;
+            }
+
+            const updatedLogId = log.id || saveResult.data?.id || saveResult.data?.log?.id;
+
+            if (!updatedLogId) {
+                toast.error("Could not verify log ID for submission. Save draft first.");
+                setIsSaving(false);
+                return;
+            }
+
+            const result = await apiFetch(`/weekly-logs/${updatedLogId}/status`, {
                 method: "PATCH",
                 body: JSON.stringify({ status: "SUBMITTED" })
             });
-            toast.success("Logbook submitted to supervisor");
-            fetchData();
+            if (result.ok) {
+                toast.success("Logbook submitted to supervisor");
+                fetchData();
+            } else {
+                toast.error(result.error || "Submission failed");
+            }
         } catch (error) {
             toast.error("Submission failed");
         } finally {
@@ -326,11 +367,15 @@ export default function StudentLogbookPage() {
     const handleSaveReport = async () => {
         setIsSaving(true);
         try {
-            await apiFetch("/iap-reports", {
+            const result = await apiFetch("/iap-reports", {
                 method: "POST",
                 body: JSON.stringify({ ...report, studentId: student.id })
             });
-            toast.success("Final report encrypted and saved");
+            if (result.ok) {
+                toast.success("Final report encrypted and saved");
+            } else {
+                toast.error(result.error || "Analysis save failed");
+            }
         } catch (error) {
             toast.error("Analysis save failed");
         } finally {
@@ -340,159 +385,364 @@ export default function StudentLogbookPage() {
 
     const generatePDF = () => {
         const doc = new jsPDF() as any;
-        const primaryColor = [26, 38, 74];
+
+        // Jost is a clean geometric sans-serif. Since embedding custom TTF requires a local file or base64,
+        // we'll use Helvetica/Arial as the standard geometric sans fallback which looks similar in PDF prints.
+        const fontName = "helvetica";
+        const primaryColor: [number, number, number] = [26, 38, 74];
 
         // PAGE 1: COVER
-        doc.setFillColor(250, 248, 240);
+        doc.setFillColor(255, 255, 255);
         doc.rect(0, 0, 210, 297, 'F');
         doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.setLineWidth(2);
+        doc.setLineWidth(1);
         doc.rect(10, 10, 190, 277);
-        doc.setFontSize(28);
-        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.text("INDUSTRIAL ATTACHMENT", 105, 80, { align: "center" });
-        doc.setFontSize(36);
-        doc.text("LOGBOOK", 105, 100, { align: "center" });
-        doc.setFontSize(16);
-        doc.text(student?.fullName?.toUpperCase() || "STUDENT NAME", 105, 150, { align: "center" });
-        doc.setFontSize(14);
-        doc.text(`Reg No: ${student?.studentNumber || "N/A"}`, 105, 160, { align: "center" });
-        doc.setFontSize(12);
-        doc.text("Professional Internship Portfolio", 105, 250, { align: "center" });
 
-        // PAGE 2: STUDENT & COMPANY DETAILS
+        doc.setFontSize(22);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.setFont(fontName, "bold");
+        doc.text("INDUSTRIAL ATTACHMENT", 105, 50, { align: "center" });
+        doc.setFontSize(30);
+        doc.text("LOGBOOK", 105, 65, { align: "center" });
+
+        // Student details
+        let y = 100;
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text("Student details:", 20, y);
+        y += 10;
+        doc.text(`Name of Student: ${student?.fullName || "__________________________________________"}`, 25, y);
+        y += 8;
+        doc.text(`Date of Birth: ${student?.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : "_____________________________________________"}`, 25, y);
+        y += 8;
+        doc.text(`ID/Passport No.: ${student?.idOrPassport || "__________________________________________"}`, 25, y);
+        y += 8;
+        doc.text(`Reg No.: ${student?.studentNumber || "_________________________________________________"}`, 25, y);
+        y += 8;
+        doc.text(`Cell Phone No.: ${student?.phone || "___________________________________________"}`, 25, y);
+
+        // Company details
+        y += 20;
+        doc.text("Company/Institution details:", 20, y);
+        y += 10;
+        doc.text(`Name: ${student?.companyName || "___________________________________________________"}`, 25, y);
+        y += 8;
+        doc.text(`Address/Location: ${student?.companyAddress || "__________________________________________"}`, 25, y);
+        y += 8;
+        doc.text(`Tel No.: ${student?.companyPhone || "__________________________________________________"}`, 25, y);
+        y += 8;
+        doc.text(`Email: ${student?.companyEmail || "___________________________________________________"}`, 25, y);
+        y += 8;
+        doc.text(`P.O.Box: ${student?.companyPOBox || "_________________________________________________"}`, 25, y);
+
+        // Supervisor details
+        y += 20;
+        doc.text("Supervisor details:", 20, y);
+        y += 10;
+        doc.text(`IAP Company Supervisor Name: ${student?.supervisorName || "_______________________________"}`, 25, y);
+        y += 8;
+        doc.text(`Designation/Title: ${student?.supervisorDesignation || "__________________________________________"}`, 25, y);
+        y += 8;
+        doc.text(`Tel No.: ${student?.supervisorPhone || "__________________________________________________"}`, 25, y);
+        y += 8;
+        doc.text(`Email: ${student?.supervisorEmail || "___________________________________________________"}`, 25, y);
+
         doc.addPage();
-        doc.setFillColor(250, 248, 240);
-        doc.rect(0, 0, 210, 297, 'F');
-        doc.setFontSize(18);
-        doc.text("Student Information", 20, 30);
-        doc.autoTable({
-            startY: 35,
-            body: [
-                ['Full Name', student?.fullName || 'N/A'],
-                ['Student Number', student?.studentNumber || 'N/A'],
-                ['Email', student?.email || 'N/A'],
-                ['Phone', student?.phone || 'N/A'],
-                ['Internship Period', `${student?.internshipStart ? new Date(student.internshipStart).toLocaleDateString() : 'N/A'} - ${student?.internshipEnd ? new Date(student.internshipEnd).toLocaleDateString() : 'N/A'}`],
-                ['Final Assessment Score', student?.ratings?.[0]?.rating ? `${student.ratings[0].rating}%` : 'Pending']
-            ],
-            theme: 'grid',
-            styles: { fillColor: [255, 255, 255], fontSize: 10, cellPadding: 5 },
-            columnStyles: { 0: { fontStyle: 'bold', width: 50, fillColor: [240, 240, 240] } }
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, 210, 20, 'F');
+        doc.setFontSize(14);
+        doc.setTextColor(255, 255, 255);
+        doc.text("IAP OBJECTIVES & GUIDELINES", 105, 13, { align: "center" });
+
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        const objectives = [
+            "To develop students and enhance their range of technical and transferable skills.",
+            "To expose students to industry practices, trends, and real-world challenges.",
+            "To build professional networks and establish industry connections.",
+            "To explore career interests and clarify professional goals.",
+            "To foster professional growth, resilience, and adaptability.",
+            "To integrate academic learning with practical industrial application."
+        ];
+
+        let yPos = 35;
+        doc.setFont(fontName, "bold");
+        doc.text("Primary Objectives:", 20, yPos);
+        doc.setFont(fontName, "normal");
+        yPos += 8;
+        objectives.forEach(obj => {
+            doc.text(`• ${obj}`, 25, yPos);
+            yPos += 6;
         });
 
-
-        const y2 = (doc as any).lastAutoTable.finalY + 15;
-        doc.text("Placement Information", 20, y2);
-        doc.autoTable({
-            startY: y2 + 5,
-            body: [
-                ['Company Name', student?.companyName || 'N/A'],
-                ['Address', student?.companyAddress || 'N/A'],
-                ['Supervisor', student?.supervisorName || 'N/A'],
-                ['Supervisor Email', student?.supervisorEmail || 'N/A'],
-            ],
-            theme: 'grid',
-            styles: { fillColor: [255, 255, 255], fontSize: 10, cellPadding: 5 },
-            columnStyles: { 0: { fontStyle: 'bold', width: 50, fillColor: [240, 240, 240] } }
+        yPos += 10;
+        doc.setFont(fontName, "bold");
+        doc.text("Key Compulsory Guidelines for Students:", 20, yPos);
+        doc.setFont(fontName, "normal");
+        yPos += 8;
+        const guidelines = [
+            "Maintain regular attendance and puncuality throughout the attachment.",
+            "Ensure the logbook is updated daily and reviewed by the supervisor weekly.",
+            "Adhere to all safety regulations and company policies at all times.",
+            "Maintain a professional attitude and foster positive relationships with colleagues.",
+            "Notify the liaison officer immediately in case of any challenges or absence."
+        ];
+        guidelines.forEach(g => {
+            const splitG = doc.splitTextToSize(`- ${g}`, 170);
+            doc.text(splitG, 25, yPos);
+            yPos += splitG.length * 5 + 1;
         });
 
         // WEEKLY LOGS
-        generatedWeeksList.forEach((w) => {
+        const drawCheckbox = (x: number, y: number, checked: boolean) => {
+            doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.rect(x, y - 3, 4, 4);
+            if (checked) {
+                doc.setLineWidth(0.5);
+                doc.line(x + 1, y - 1, x + 2, y + 1);
+                doc.line(x + 2, y + 1, x + 4, y - 3);
+                doc.setLineWidth(0.1);
+            }
+        };
+
+        generatedWeeksList.forEach((week) => {
+            const log = getSafeLog(week.number);
             doc.addPage();
-            doc.setFillColor(250, 248, 240);
-            doc.rect(0, 0, 210, 297, 'F');
-            doc.setFontSize(16);
-            doc.text(`WEEK ${w.number} ACTIVITY LOG`, 105, 20, { align: "center" });
+
+            // Header Bar
+            doc.setFillColor(245, 247, 250);
+            doc.rect(0, 0, 210, 45, 'F');
+            doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setLineWidth(1);
+            doc.line(0, 45, 210, 45);
+
+            doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+            doc.setFontSize(18);
+            doc.setFont(fontName, "bold");
+            doc.text(`WEEK ${week.number}`, 20, 20);
             doc.setFontSize(10);
-            doc.text(`${new Date(w.start).toLocaleDateString()} to ${new Date(w.end).toLocaleDateString()}`, 105, 27, { align: "center" });
+            doc.text(`${new Date(week.start).toLocaleDateString()} - ${new Date(week.end).toLocaleDateString()}`, 20, 28);
 
-            const log = getSafeLog(w.number);
+            // Weekly Summary Box
+            doc.setFillColor(255, 255, 255);
+            doc.roundedRect(120, 10, 70, 25, 3, 3, 'FD');
+            doc.setFontSize(8);
+            doc.text("TOTAL WEEKLY HOURS", 130, 20);
+            doc.setFontSize(14);
+            doc.text(`${log.totalHours || 0} Hours`, 130, 30);
 
-            doc.autoTable({
-                startY: 35,
-                head: [['DAY', 'NATURE OF WORK / TASKS PERFORMED', 'HRS']],
-                body: [
-                    ['MON', log.mondayTask || '', log.mondayHours || '0'],
-                    ['TUE', log.tuesdayTask || '', log.tuesdayHours || '0'],
-                    ['WED', log.wednesdayTask || '', log.wednesdayHours || '0'],
-                    ['THU', log.thursdayTask || '', log.thursdayHours || '0'],
-                    ['FRI', log.fridayTask || '', log.fridayHours || '0'],
-                ],
+            const days = [
+                { name: 'Monday', task: log.mondayTask, hours: log.mondayHours },
+                { name: 'Tuesday', task: log.tuesdayTask, hours: log.tuesdayHours },
+                { name: 'Wednesday', task: log.wednesdayTask, hours: log.wednesdayHours },
+                { name: 'Thursday', task: log.thursdayTask, hours: log.thursdayHours },
+                { name: 'Friday', task: log.fridayTask, hours: log.fridayHours },
+            ];
+
+            autoTable(doc, {
+                startY: 55,
+                head: [['DAY', 'NATURE OF WORK / ACTIVITY DESCRIPTION', 'HOURS']],
+                body: days.map(d => [d.name.toUpperCase(), d.task || '-', d.hours || 0]),
                 theme: 'grid',
-                headStyles: { fillColor: primaryColor },
-                styles: { fontSize: 9, minCellHeight: 20 },
-                columnStyles: { 0: { fontStyle: 'bold', width: 15 }, 2: { width: 15, halign: 'center' } }
+                headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold' },
+                styles: { fontSize: 9, cellPadding: 5, font: fontName },
+                columnStyles: {
+                    0: { fontStyle: 'bold', cellWidth: 30 },
+                    2: { halign: 'center', cellWidth: 20 }
+                }
             });
 
-            const ySum = (doc as any).lastAutoTable.finalY + 10;
-            doc.setFontSize(11);
-            doc.text("Weekly Summary Statement:", 20, ySum);
+            yPos = (doc as any).lastAutoTable.finalY + 10;
+
+            // Statement box
             doc.setFontSize(10);
-            const splitSummary = doc.splitTextToSize(log.generalStatement || "No summary provided.", 170);
-            doc.text(splitSummary, 20, ySum + 8);
+            doc.setFont(fontName, "bold");
+            doc.text("General Statement of student's progress:", 20, yPos);
+            yPos += 5;
+            doc.setFont(fontName, "normal");
+            const stmt = doc.splitTextToSize(log.generalStatement || "No summary provided.", 170);
+            doc.text(stmt, 25, yPos);
+            yPos += stmt.length * 5 + 10;
+
+            // Grading & Approval
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.1);
+            doc.line(20, yPos, 190, yPos);
+            yPos += 10;
+
+            doc.setFont(fontName, "bold");
+            doc.text("Supervisor's Assessment:", 20, yPos);
+            yPos += 10;
+
+            const grades = ['A', 'B', 'C', 'D', 'E'];
+            let xGrade = 25;
+            grades.forEach(g => {
+                drawCheckbox(xGrade, yPos, log.grade === g);
+                doc.text(g, xGrade + 6, yPos);
+                xGrade += 20;
+            });
+
+            yPos += 15;
+            doc.setFontSize(9);
+            doc.text(`Print Name: ${log.supervisorName || '____________________'}`, 20, yPos);
+            doc.text(`Date: ${log.supervisorDate || '_____________________'}`, 120, yPos);
+            yPos += 10;
+            doc.text(`Signature: ${log.supervisorSignature ? '[Signed Digitally]' : '____________________'}`, 20, yPos);
         });
 
-        // PAGE: RESULT REPORT
         doc.addPage();
-        doc.setFillColor(250, 248, 240);
-        doc.rect(0, 0, 210, 297, 'F');
-        doc.setFontSize(18);
-        doc.text("Industrial Engagement Analysis", 20, 30);
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, 210, 25, 'F');
+        doc.setFontSize(16);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont(fontName, "bold");
+        doc.text("Industrial Attachment Assessment (Employer Copy)", 105, 16, { align: "center" });
 
-        doc.autoTable({
-            startY: 40,
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        doc.setFont(fontName, "normal");
+
+        yPos = 35;
+        doc.text(`Student Name: ${student?.fullName || 'N/A'}`, 20, yPos);
+        doc.text(`Department: ${student?.year || 'N/A'}`, 120, yPos);
+        yPos += 12;
+
+        doc.setFont(fontName, "bold");
+        doc.text("Detailed Marking Scheme", 20, yPos);
+
+        const latestRating = student?.ratings?.[0] || {};
+        const knowledgeScore = (latestRating?.knowledgeWirelessOps || 0) + (latestRating?.knowledgeWirelessEst || 0) + (latestRating?.knowledgeWirelessMaint || 0) + (latestRating?.knowledgeApplication || 0);
+        const responsibilityScore = (latestRating?.responsibility || 0) + (latestRating?.cooperativeness || 0) + (latestRating?.complianceEtiquette || 0);
+        const safetyScore = (latestRating?.safetyAwareness || 0) + (latestRating?.safetyCompliance || 0) + (latestRating?.safetyArrangement || 0);
+
+        autoTable(doc, {
+            startY: yPos + 5,
+            head: [['Evaluation Category & Items', 'Max', 'Actual']],
             body: [
-                ['Was the IAP useful?', report.isUseful ? 'YES' : 'NO'],
-                ['Improved understanding of theory?', report.improvedUnderstanding ? 'YES' : 'NO'],
-                ['Provided practical experiences?', report.providedExperiences ? 'YES' : 'NO'],
+                [{ content: '1. RELATED KNOWLEDGE', styles: { fontStyle: 'bold', fillColor: [245, 245, 245] } }, '40', knowledgeScore],
+                ['   - Support for wireless network ops', '10', latestRating?.knowledgeWirelessOps || '0'],
+                ['   - Establishment of wireless network', '10', latestRating?.knowledgeWirelessEst || '0'],
+                ['   - Maintenance of wireless comm room', '10', latestRating?.knowledgeWirelessMaint || '0'],
+                ['   - Related knowledge application', '10', latestRating?.knowledgeApplication || '0'],
+                [{ content: '2. RESPONSIBILITY & ATTITUDE', styles: { fontStyle: 'bold', fillColor: [245, 245, 245] } }, '30', responsibilityScore],
+                ['   - Reliability & Engagement', '10', latestRating?.responsibility || '0'],
+                ['   - Cooperativeness with team', '10', latestRating?.cooperativeness || '0'],
+                ['   - Compliance & Etiquette', '10', latestRating?.complianceEtiquette || '0'],
+                [{ content: '3. SAFETY MANAGEMENT', styles: { fontStyle: 'bold', fillColor: [245, 245, 245] } }, '30', safetyScore],
+                ['   - Awareness of safety protocols', '10', latestRating?.safetyAwareness || '0'],
+                ['   - Compliance with safety rules', '10', latestRating?.safetyCompliance || '0'],
+                ['   - Maintenance of safety gear', '10', latestRating?.safetyArrangement || '0'],
+                [{ content: 'TOTAL ASSESSMENT SCORE', styles: { fontStyle: 'bold', textColor: primaryColor } }, '100', latestRating?.rating || '0'],
             ],
             theme: 'grid',
-            styles: { fontSize: 10, cellPadding: 5 }
+            headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
+            styles: { fontSize: 8.5, cellPadding: 4, font: fontName },
+            columnStyles: { 0: { cellWidth: 120 } }
         });
 
-        const yAchievement = (doc as any).lastAutoTable.finalY + 15;
-        doc.setFontSize(12);
-        doc.text("Notable Achievements:", 20, yAchievement);
+        yPos = (doc as any).lastAutoTable.finalY + 15;
         doc.setFontSize(10);
-        const splitAchievements = doc.splitTextToSize(report.notableAchievements || "N/A", 170);
-        doc.text(splitAchievements, 20, yAchievement + 7);
+        doc.setFont(fontName, "bold");
+        doc.text(`Days of Absence: ${student?.absentDays || 0} Days`, 20, yPos);
+        yPos += 8;
+        doc.setFont(fontName, "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text("* 10 points deducted for each unauthorised absence. Unauthorised late arrival (3x) = 1 day absence.", 20, yPos);
 
-        const yCareer = yAchievement + 10 + (splitAchievements.length * 5);
-        doc.setFontSize(12);
-        doc.text("Future Career Plans:", 20, yCareer);
+        yPos += 15;
+        doc.setTextColor(0, 0, 0);
         doc.setFontSize(10);
-        const splitCareer = doc.splitTextToSize(report.futureCareerPlan || "N/A", 170);
-        doc.text(splitCareer, 20, yCareer + 7);
+        doc.setFont(fontName, "bold");
+        doc.text("Overall Performance Review:", 20, yPos);
+        yPos += 6;
+        doc.setFont(fontName, "normal");
+        const review = doc.splitTextToSize(latestRating?.comment || "No formal review submitted yet.", 170);
+        doc.text(review, 25, yPos);
 
-        // FINAL PAGE: ASSESSMENT
+        yPos += (review.length * 5) + 20;
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(0);
+        doc.line(20, yPos, 80, yPos);
+        doc.line(120, yPos, 180, yPos);
+        doc.text("Evaluator Signature", 20, yPos + 5);
+        doc.text("Company Stamp", 120, yPos + 5);
+
+        // SATISFACTION & STUDENT REPORT
         doc.addPage();
-        doc.setFillColor(250, 248, 240);
-        doc.rect(0, 0, 210, 297, 'F');
-        doc.setFontSize(18);
-        doc.text("Final Evaluation & Assessment", 20, 30);
+        doc.setFontSize(16);
+        doc.setFont(fontName, "bold");
+        doc.text("Industrial Attachment Result Report", 105, 20, { align: "center" });
 
-        doc.autoTable({
-            startY: 40,
+        autoTable(doc, {
+            startY: 30,
             body: [
-                ['Final Performance Grade', student?.grade || 'PENDING'],
-                ['Supervisor Verification', student?.supervisorSignature ? 'AUTHENTICATED' : 'PENDING'],
-                ['Verification Date', student?.supervisorDate ? new Date(student.supervisorDate).toLocaleDateString() : 'N/A'],
+                ['Student Name', student?.fullName || 'N/A'],
+                ['Company Name', student?.companyName || 'N/A'],
+                ['IAP Duration', `${student?.internshipStart ? new Date(student.internshipStart).toLocaleDateString() : 'N/A'} to ${student?.internshipEnd ? new Date(student.internshipEnd).toLocaleDateString() : 'N/A'}`],
             ],
-            theme: 'striped',
-            styles: { fontSize: 11, cellPadding: 8 }
+            theme: 'grid',
+            styles: { fontSize: 10, cellPadding: 5, font: fontName },
+            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60, fillColor: [248, 250, 252] } }
         });
 
-        const ySig = 240;
-        doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.line(20, ySig, 90, ySig);
-        doc.line(120, ySig, 190, ySig);
-        doc.setFontSize(10);
-        doc.text("Student Signature", 55, ySig + 7, { align: "center" });
-        doc.text("Supervisor Seal & Signature", 155, ySig + 7, { align: "center" });
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+        doc.setFontSize(12);
+        doc.setFont(fontName, "bold");
+        doc.text("Student Satisfaction Matrix", 20, yPos);
 
-        doc.save(`Complete_Logbook_${student?.fullName?.replace(/\s+/g, '_')}.pdf`);
-        toast.success("Comprehensive Logbook Portfolio Generated!");
+        autoTable(doc, {
+            startY: yPos + 5,
+            head: [['Engagement Category', 'Excellent', 'Average', 'Poor']],
+            body: [
+                ['Satisfaction with Industry Environment', report.satisfactionIndustry === 'Excellent' ? 'TICK' : '', report.satisfactionIndustry === 'Average' ? 'TICK' : '', report.satisfactionIndustry === 'Poor' ? 'TICK' : ''],
+                ['Satisfaction with Academic Relevance', report.satisfactionMajor === 'Excellent' ? 'TICK' : '', report.satisfactionMajor === 'Average' ? 'TICK' : '', report.satisfactionMajor === 'Poor' ? 'TICK' : ''],
+                ['Satisfaction with Practical Workflow', report.satisfactionPractical === 'Excellent' ? 'TICK' : '', report.satisfactionPractical === 'Average' ? 'TICK' : '', report.satisfactionPractical === 'Poor' ? 'TICK' : ''],
+                ['Satisfaction with Instructor Support', report.satisfactionInstructors === 'Excellent' ? 'TICK' : '', report.satisfactionInstructors === 'Average' ? 'TICK' : '', report.satisfactionInstructors === 'Poor' ? 'TICK' : ''],
+            ],
+            theme: 'grid',
+            styles: { fontSize: 9, font: fontName, halign: 'center' },
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+        doc.setFontSize(12);
+        doc.setFont(fontName, "bold");
+        doc.text("Programme Activity Checklist", 20, yPos);
+        yPos += 8;
+        doc.setFont(fontName, "normal");
+        doc.setFontSize(10);
+
+        const activities = [
+            "Assisting in software development and coding tasks.",
+            "Participating in the design, implementation, and testing of SW systems.",
+            "Debugging and troubleshooting software issues.",
+            "Collaborating with the development team to enhance existing software applications.",
+            "Conducting research and feasibility studies for new SW features or technologies.",
+            "Writing and maintaining technical documentation and user manuals.",
+            "Participating in code reviews and providing feedback on code quality.",
+            "Assisting in the development of embedded systems firmware or software.",
+            "Testing and validating embedded systems functionality.",
+            "Collaborating with HW engineers in the integration of SW and HW components.",
+            "Conducting performance optimization and memory management for embedded systems."
+        ];
+
+        activities.forEach(a => {
+            const isChecked = report.programmeTypes?.includes(a);
+            doc.text(`[${isChecked ? 'X' : ' '}] ${a}`, 25, yPos);
+            yPos += 6;
+        });
+
+        if (report.otherProgrammeDetails) {
+            doc.text(`[X] Others: ${report.otherProgrammeDetails}`, 25, yPos);
+            yPos += 8;
+        }
+
+        yPos = Math.max(yPos + 20, 260);
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPos);
+        doc.text("Signature of Student: _______________________", 120, yPos);
+
+        doc.save(`RCA_IAP_Portfolio_${student?.fullName?.replace(/\s+/g, '_')}.pdf`);
+        toast.success("Professional Portfolio Generated!");
     };
 
     if (loading) {
@@ -539,12 +789,12 @@ export default function StudentLogbookPage() {
                 <div className="flex flex-wrap gap-4">
                     <Button
                         onClick={generatePDF}
-                        disabled={!isAfterInternship}
-                        className={`rounded-xl h-12 px-6 font-semibold text-sm shadow-sm transition-all ${isAfterInternship ? 'bg-primary text-white hover:bg-primary/90' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                        disabled={!isAfterInternship && !student?.ratings?.[0]?.rating}
+                        className={`rounded-xl h-12 px-6 font-semibold text-sm shadow-sm transition-all ${isAfterInternship || student?.ratings?.[0]?.rating ? 'bg-primary text-white hover:bg-primary/90' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
                     >
-                        {isAfterInternship
+                        {isAfterInternship || student?.ratings?.[0]?.rating
                             ? <><Download className="h-4 w-4 mr-2" /> Download Logbook PDF</>
-                            : "PDF available after internship ends"
+                            : "PDF available after assessment"
                         }
                     </Button>
                 </div>
@@ -703,10 +953,12 @@ export default function StudentLogbookPage() {
                                     <CardContent className="p-8">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <LogbookInput label="IAP Company Supervisor Name" value={student?.supervisorName} onChange={(v) => setStudent({ ...student, supervisorName: v })} />
-                                            <LogbookInput label="Department" value={student?.supervisorDepartment} onChange={(v) => setStudent({ ...student, supervisorDepartment: v })} />
-                                            <LogbookInput label="Tel/Mob No. (Supervisor)" value={student?.supervisorPhone} onChange={(v) => setStudent({ ...student, supervisorPhone: v })} />
+                                            <LogbookInput label="Supervisor Designation/Title" value={student?.supervisorDesignation} onChange={(v) => setStudent({ ...student, supervisorDesignation: v })} />
+                                            <LogbookInput label="Supervisor Department" value={student?.supervisorDepartment} onChange={(v) => setStudent({ ...student, supervisorDepartment: v })} />
+                                            <LogbookInput label="Supervisor Tel No." value={student?.supervisorPhone} onChange={(v) => setStudent({ ...student, supervisorPhone: v })} />
+                                            <LogbookInput label="Supervisor Email" value={student?.supervisorEmail} onChange={(v) => setStudent({ ...student, supervisorEmail: v })} />
                                             <LogbookInput label="RCA Liaison Officer Name" value={student?.liaisonOfficerName} onChange={(v) => setStudent({ ...student, liaisonOfficerName: v })} />
-                                            <LogbookInput label="Tel/Mob No. (Liaison Officer)" value={student?.liaisonOfficerPhone} onChange={(v) => setStudent({ ...student, liaisonOfficerPhone: v })} />
+                                            <LogbookInput label="Liaison Officer Tel No." value={student?.liaisonOfficerPhone} onChange={(v) => setStudent({ ...student, liaisonOfficerPhone: v })} />
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -920,14 +1172,20 @@ export default function StudentLogbookPage() {
                                                             <div className="space-y-4">
                                                                 <div>
                                                                     <h4 className="font-bold text-slate-900 flex items-center gap-2">
-                                                                        <FileText className="h-4 w-4 text-primary" /> General Statement
+                                                                        <FileText className="h-4 w-4 text-primary"/> Student's
+General
+Statement on
+Attachment
                                                                     </h4>
-                                                                    <p className="text-xs text-slate-500 mt-1">Brief summary of the week&apos;s overall progress and learnings.</p>
+                                                                    {/* <p className="text-xs text-slate-500 mt-1">Brief summary of the week&apos;s overall progress and learnings.</p> */}
                                                                 </div>
                                                                 <textarea
                                                                     disabled={getSafeLog(expandedWeek).status !== 'DRAFT'}
                                                                     className={`w-full h-32 bg-white border border-slate-200 rounded-lg p-4 text-sm text-slate-800 resize-none focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-slate-400 ${getSafeLog(expandedWeek).status !== 'DRAFT' ? 'bg-slate-50 cursor-not-allowed opacity-75' : ''}`}
-                                                                    placeholder="Summarize your week here..."
+                                                                    placeholder="(e.g. After learning the process of production along with an overview of the company's
+products in the second week of practice, I was able to understand the characteristics of
+company A's products anew. It was also a time to feel once again why production
+management is important in product production.)"
                                                                     value={getSafeLog(expandedWeek).generalStatement || ""}
                                                                     onChange={(e) => updateLogField(expandedWeek, 'generalStatement', e.target.value)}
                                                                 />
@@ -1000,9 +1258,7 @@ export default function StudentLogbookPage() {
                                                                     </Button>
                                                                     <Button
                                                                         onClick={() => {
-                                                                            const log = getSafeLog(expandedWeek);
-                                                                            if (log.id) handleSubmitWeeklyLog(log.id);
-                                                                            else toast.error("Please save the log as draft first");
+                                                                            handleSubmitWeeklyLog(getSafeLog(expandedWeek));
                                                                         }}
                                                                         disabled={isSaving}
                                                                         className="h-12 px-8 rounded-lg bg-primary text-white font-bold shadow-sm"
@@ -1042,10 +1298,88 @@ export default function StudentLogbookPage() {
                                     <p className="text-slate-500 text-sm mt-1">Final outcome reporting and suggestion vault</p>
                                 </CardHeader>
                                 <CardContent className="p-8 space-y-12">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                                        <LogbookInput label="LO Visit Count" type="number" value={report.loVisitCount?.toString()} onChange={(v) => setReport({ ...report, loVisitCount: parseInt(v) || 0 })} />
                                         <SurveyButton label="IAP was useful?" active={report.isUseful} onClick={() => setReport({ ...report, isUseful: true })} onDecline={() => setReport({ ...report, isUseful: false })} />
                                         <SurveyButton label="Improved Understanding?" active={report.improvedUnderstanding} onClick={() => setReport({ ...report, improvedUnderstanding: true })} onDecline={() => setReport({ ...report, improvedUnderstanding: false })} />
                                         <SurveyButton label="Provided Experience?" active={report.providedExperiences} onClick={() => setReport({ ...report, providedExperiences: true })} onDecline={() => setReport({ ...report, providedExperiences: false })} />
+                                    </div>
+
+                                    <div className="pt-8 border-t border-slate-200">
+                                        <h3 className="text-sm font-bold text-slate-900 mb-6 uppercase tracking-wider">Programme Activity Checklist</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {[
+                                                "Assisting in software development and coding tasks.",
+                                                "Participating in the design, implementation, and testing of SW systems.",
+                                                "Debugging and troubleshooting software issues.",
+                                                "Collaborating with the development team to enhance existing software applications.",
+                                                "Conducting research and feasibility studies for new SW features or technologies.",
+                                                "Writing and maintaining technical documentation and user manuals.",
+                                                "Participating in code reviews and providing feedback on code quality.",
+                                                "Assisting in the development of embedded systems firmware or software.",
+                                                "Testing and validating embedded systems functionality.",
+                                                "Collaborating with HW engineers in the integration of SW and HW components.",
+                                                "Conducting performance optimization and memory management for embedded systems."
+                                            ].map((activity) => (
+                                                <label key={activity} className="flex items-start gap-3 p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors cursor-pointer group">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={report.programmeTypes?.includes(activity)}
+                                                        onChange={(e) => {
+                                                            const types = report.programmeTypes || [];
+                                                            if (e.target.checked) {
+                                                                setReport({ ...report, programmeTypes: [...types, activity] });
+                                                            } else {
+                                                                setReport({ ...report, programmeTypes: types.filter(t => t !== activity) });
+                                                            }
+                                                        }}
+                                                        className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary/20"
+                                                    />
+                                                    <span className="text-sm text-slate-700 leading-tight group-hover:text-slate-900 transition-colors">{activity}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <div className="mt-4">
+                                            <LogbookInput label="Others (Please describe)" value={report.otherProgrammeDetails} onChange={(v) => setReport({ ...report, otherProgrammeDetails: v })} />
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-8 border-t border-slate-200 space-y-8">
+                                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Satisfaction Matrix</h3>
+                                            <div className="bg-slate-100 p-1 rounded-lg flex gap-2">
+                                                {['Excellent', 'Average', 'Poor'].map(level => (
+                                                    <div key={level} className="px-3 py-1 text-[10px] font-bold uppercase text-slate-500">{level}</div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-4">
+                                            {[
+                                                { label: 'Satisfaction with industry', key: 'satisfactionIndustry' },
+                                                { label: 'Satisfaction with relevant major', key: 'satisfactionMajor' },
+                                                { label: 'Satisfaction with practical work', key: 'satisfactionPractical' },
+                                                { label: 'Satisfaction with instructors', key: 'satisfactionInstructors' }
+                                            ].map(({ label, key }) => (
+                                                <div key={key} className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl border border-slate-100 bg-white">
+                                                    <span className="text-sm font-medium text-slate-700">{label}</span>
+                                                    <div className="flex gap-4 mt-3 md:mt-0">
+                                                        {['Excellent', 'Average', 'Poor'].map((level) => (
+                                                            <button
+                                                                key={level}
+                                                                onClick={() => setReport({ ...report, [key]: level })}
+                                                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${report[key as keyof IapReport] === level
+                                                                    ? 'bg-primary border-primary text-white shadow-md'
+                                                                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                                                                    }`}
+                                                            >
+                                                                {level}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
 
                                     <div className="space-y-8 pt-8 border-t border-slate-200">
@@ -1100,11 +1434,121 @@ export default function StudentLogbookPage() {
                                         </div>
                                         <div className="h-20 w-24 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center shadow-sm">
                                             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Score</span>
-                                            <span className="text-3xl font-black text-primary">{student?.ratings?.[0]?.rating ? `${student.ratings[0].rating}%` : "—"}</span>
+                                            <span className="text-3xl font-black text-primary">
+                                                {student?.ratings?.[0]?.rating !== undefined ? `${student.ratings[0].rating}` : "—"}
+                                            </span>
+                                            {student?.ratings?.[0]?.rating !== undefined && (
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase">/100</span>
+                                            )}
                                         </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-8 space-y-8">
+                                    {student?.ratings?.[0] ? (
+                                        <>
+                                            {/* Rating Breakdown */}
+                                            <div className="space-y-6">
+                                                <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-3">
+                                                    <div className="h-px w-8 bg-slate-200"></div> Detailed Assessment Breakdown
+                                                </h4>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                    {/* Knowledge */}
+                                                    <div className="p-5 rounded-xl border border-blue-100 bg-blue-50/50 space-y-3">
+                                                        <h5 className="text-xs font-black text-blue-700 uppercase tracking-wider">Related Knowledge (40%)</h5>
+                                                        {[
+                                                            { label: 'Wireless Network Ops', key: 'knowledgeWirelessOps' },
+                                                            { label: 'Wireless Network Est.', key: 'knowledgeWirelessEst' },
+                                                            { label: 'Wireless Comm Room Maint.', key: 'knowledgeWirelessMaint' },
+                                                            { label: 'Knowledge Application', key: 'knowledgeApplication' },
+                                                        ].map(item => (
+                                                            <div key={item.key} className="flex justify-between items-center">
+                                                                <span className="text-xs text-slate-600">{item.label}</span>
+                                                                <span className="text-sm font-black text-blue-700">{student.ratings[0][item.key] ?? 0}/10</span>
+                                                            </div>
+                                                        ))}
+                                                        <div className="pt-2 border-t border-blue-200 flex justify-between">
+                                                            <span className="text-xs font-bold text-blue-800">Subtotal</span>
+                                                            <span className="text-sm font-black text-blue-800">
+                                                                {(student.ratings[0].knowledgeWirelessOps || 0) + (student.ratings[0].knowledgeWirelessEst || 0) + (student.ratings[0].knowledgeWirelessMaint || 0) + (student.ratings[0].knowledgeApplication || 0)}/40
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Responsibility */}
+                                                    <div className="p-5 rounded-xl border border-amber-100 bg-amber-50/50 space-y-3">
+                                                        <h5 className="text-xs font-black text-amber-700 uppercase tracking-wider">Responsibility & Attitude (30%)</h5>
+                                                        {[
+                                                            { label: 'Responsibility', key: 'responsibility' },
+                                                            { label: 'Cooperativeness', key: 'cooperativeness' },
+                                                            { label: 'Compliance & Etiquette', key: 'complianceEtiquette' },
+                                                        ].map(item => (
+                                                            <div key={item.key} className="flex justify-between items-center">
+                                                                <span className="text-xs text-slate-600">{item.label}</span>
+                                                                <span className="text-sm font-black text-amber-700">{student.ratings[0][item.key] ?? 0}/10</span>
+                                                            </div>
+                                                        ))}
+                                                        <div className="pt-2 border-t border-amber-200 flex justify-between">
+                                                            <span className="text-xs font-bold text-amber-800">Subtotal</span>
+                                                            <span className="text-sm font-black text-amber-800">
+                                                                {(student.ratings[0].responsibility || 0) + (student.ratings[0].cooperativeness || 0) + (student.ratings[0].complianceEtiquette || 0)}/30
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Safety */}
+                                                    <div className="p-5 rounded-xl border border-emerald-100 bg-emerald-50/50 space-y-3">
+                                                        <h5 className="text-xs font-black text-emerald-700 uppercase tracking-wider">Safety Management (30%)</h5>
+                                                        {[
+                                                            { label: 'Safety Awareness', key: 'safetyAwareness' },
+                                                            { label: 'Safety Compliance', key: 'safetyCompliance' },
+                                                            { label: 'Safety Arrangement', key: 'safetyArrangement' },
+                                                        ].map(item => (
+                                                            <div key={item.key} className="flex justify-between items-center">
+                                                                <span className="text-xs text-slate-600">{item.label}</span>
+                                                                <span className="text-sm font-black text-emerald-700">{student.ratings[0][item.key] ?? 0}/10</span>
+                                                            </div>
+                                                        ))}
+                                                        <div className="pt-2 border-t border-emerald-200 flex justify-between">
+                                                            <span className="text-xs font-bold text-emerald-800">Subtotal</span>
+                                                            <span className="text-sm font-black text-emerald-800">
+                                                                {(student.ratings[0].safetyAwareness || 0) + (student.ratings[0].safetyCompliance || 0) + (student.ratings[0].safetyArrangement || 0)}/30
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Comment */}
+                                                {student.ratings[0].comment && (
+                                                    <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/50">
+                                                        <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Supervisor Review</h5>
+                                                        <p className="text-sm text-slate-700 italic leading-relaxed">&quot;{student.ratings[0].comment}&quot;</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Total score display */}
+                                                <div className="p-5 rounded-2xl bg-slate-900 text-white flex justify-between items-center">
+                                                    <div>
+                                                        <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Final Assessment Score</p>
+                                                        <p className="text-3xl font-black">{student.ratings[0].rating} <span className="text-lg text-white/50">/ 100</span></p>
+                                                    </div>
+                                                    <div className={`h-14 w-14 rounded-full border-2 border-white/20 flex items-center justify-center font-black text-sm ${student.ratings[0].rating >= 80 ? 'bg-green-500/30 text-green-300' :
+                                                        student.ratings[0].rating >= 60 ? 'bg-amber-500/30 text-amber-300' :
+                                                            'bg-red-500/30 text-red-300'
+                                                        }`}>
+                                                        {student.ratings[0].rating >= 80 ? 'EX' : student.ratings[0].rating >= 60 ? 'GD' : 'NI'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="py-12 text-center text-slate-400 space-y-2">
+                                            <LockKeyhole className="h-10 w-10 mx-auto text-slate-300" />
+                                            <p className="font-bold text-slate-600">No Assessment Submitted Yet</p>
+                                            <p className="text-sm">Your supervisor has not yet submitted the industrial assessment form. Ratings will appear here once submitted.</p>
+                                        </div>
+                                    )}
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-6">
                                             <h4 className="text-sm font-bold text-slate-900 flex items-center gap-3">
@@ -1154,6 +1598,14 @@ export default function StudentLogbookPage() {
                                             </p>
                                         </div>
                                     </div>
+
+                                    {student?.ratings?.[0]?.rating && (
+                                        <div className="pt-4 flex justify-center">
+                                            <Button onClick={generatePDF} className="bg-primary text-white gap-2 h-12 px-8 rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform">
+                                                <Download className="h-5 w-5" /> Download Final Logbook Report
+                                            </Button>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         )}

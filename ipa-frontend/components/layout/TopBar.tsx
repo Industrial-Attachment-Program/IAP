@@ -28,33 +28,40 @@ export function TopBar({ role, userId }: TopBarProps) {
                 try {
                     const parsed = JSON.parse(storedUser);
                     setUser(parsed);
-                    // Estimate unread from local if possible, or leave as 0
+                    if (parsed.notifications) {
+                        const unread = (parsed.notifications || []).filter((n: any) => !n.read).length;
+                        setUnreadCount(unread);
+                    }
                 } catch (e) {
                     console.error("TopBar: Local storage parse failed", e);
                 }
             }
         }
 
-        if (userId) {
-            fetchCurrentUser(userId);
+        // Only fetch if we don't have the user or it's a new userId
+        if (userId && (!user || user.id !== userId)) {
+            fetchCurrentUser();
+        } else {
+            setLoading(false);
         }
     }, [userId]);
 
-    const fetchCurrentUser = async (id: number) => {
+    const fetchCurrentUser = async () => {
         try {
-            const data = await apiFetch(`/auth/me?userId=${id}`);
+            const result = await apiFetch('/auth/me');
 
-            if (data) {
+            if (result.ok && result.data) {
+                const data = result.data;
                 setUser(data);
+                // Background update of storage
                 localStorage.setItem("user", JSON.stringify(data));
                 const unread = (data.notifications || []).filter((n: any) => !n.read).length;
                 setUnreadCount(unread);
+            } else if (result.status === 401) {
+                console.warn("TopBar: Session expired or unauthorized.");
             }
-
         } catch (error) {
-            // Silently log backend connectivity issue or auth failure
-            // This prevents intrusive error screens during route transitions
-            console.log("TopBar: Session verification failed or backend unreachable.");
+            console.error("TopBar: Failed to verify session.", error);
         } finally {
             setLoading(false);
         }
