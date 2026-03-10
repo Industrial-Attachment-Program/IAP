@@ -284,18 +284,27 @@ export class WeeklyLogsService {
             );
         }
 
-        // Handle date and number conversions for the new fields
         rest.startDate = rest.startDate ? new Date(rest.startDate) : undefined;
         rest.endDate = rest.endDate ? new Date(rest.endDate) : undefined;
         rest.supervisorDate = (rest.supervisorDate && rest.supervisorDate !== "") ? new Date(rest.supervisorDate) : null;
 
-        // Convert hours to Float
+
         if (rest.mondayHours !== undefined) rest.mondayHours = Number(rest.mondayHours);
         if (rest.tuesdayHours !== undefined) rest.tuesdayHours = Number(rest.tuesdayHours);
         if (rest.wednesdayHours !== undefined) rest.wednesdayHours = Number(rest.wednesdayHours);
         if (rest.thursdayHours !== undefined) rest.thursdayHours = Number(rest.thursdayHours);
         if (rest.fridayHours !== undefined) rest.fridayHours = Number(rest.fridayHours);
         if (rest.totalHours !== undefined) rest.totalHours = Number(rest.totalHours);
+
+
+        const {
+            id,
+            createdAt,
+            updatedAt,
+            dailyEntries,
+            student,
+            ...sanitizedData
+        } = rest;
 
         const existing = await this.prisma.weeklyLog.findFirst({
             where: { studentId: sId, weekNumber: wNum },
@@ -304,7 +313,7 @@ export class WeeklyLogsService {
         if (existing) {
             return this.prisma.weeklyLog.update({
                 where: { id: existing.id },
-                data: { ...rest },
+                data: sanitizedData,
             });
         }
 
@@ -312,7 +321,7 @@ export class WeeklyLogsService {
             data: {
                 studentId: sId,
                 weekNumber: wNum,
-                ...rest,
+                ...sanitizedData,
             },
         });
     }

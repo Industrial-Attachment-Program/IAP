@@ -103,7 +103,7 @@ export default function LoginPage() {
                     <div>
                         <Link href="/" className="inline-flex items-center gap-3 group">
                             <div>
-                                <div className="text-white font-black text-xl leading-none">IPA System</div>
+                                <div className="text-white font-black text-xl leading-none">IAP System</div>
                             </div>
                         </Link>
                     </div>
@@ -162,10 +162,7 @@ export default function LoginPage() {
                 {/* Mobile brand */}
                 <div className="absolute top-6 left-6 lg:hidden">
                     <Link href="/" className="inline-flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                            <span className="text-white font-black text-xs">IA</span>
-                        </div>
-                        <span className="font-black text-primary text-sm">IPA Portal</span>
+                        <span className="font-black text-primary text-sm">IAP Portal</span>
                     </Link>
                 </div>
 
@@ -204,7 +201,7 @@ export default function LoginPage() {
                         {/* Email */}
                         <div className="space-y-2">
                             <label className="text-lg font-semibold text-primary/40">
-                                Email Address
+                                Email Address:
                             </label>
                             <div className="relative group">
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/25 group-focus-within:text-primary/60 transition-colors" />
@@ -224,7 +221,7 @@ export default function LoginPage() {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-lg font-semibold text-primary/40">
-                                    Password
+                                    Password:
                                 </label>
                                 <Link href="/forgot-password" className="text-[12px] font-semibold text-primary/40 hover:text-primary transition-colors">
                                     Forgot Password?

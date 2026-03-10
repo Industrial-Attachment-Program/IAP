@@ -75,7 +75,7 @@ export default function ResetPasswordPage() {
                 <div className="absolute top-[12%] right-[10%] h-44 w-44 rounded-full border border-white/10 animate-[spin_20s_linear_infinite_reverse]" />
 
                 <div className="relative z-10 flex flex-col justify-between p-14 w-full">
-                    <Link href="/" className="text-white font-black text-xl">IPA System</Link>
+                    <Link href="/" className="text-white font-black text-xl">IAP System</Link>
 
                     <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }} className="space-y-6">
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/15 backdrop-blur-sm">
