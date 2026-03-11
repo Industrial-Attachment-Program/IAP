@@ -139,7 +139,7 @@ interface AssessmentData {
 
 // ----- Component -----
 export default function SupervisorDashboard() {
-  const [activeTab, setActiveTab] = useState<"overview" | "students" | "assignments" | "weekly-logs">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "assignments">("overview");
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -516,18 +516,11 @@ export default function SupervisorDashboard() {
         <div className="flex gap-8 overflow-x-auto pb-2 md:pb-0">
           {[
             { id: "overview", label: "Overview", icon: LayoutDashboard },
-            { id: "students", label: "My Students", icon: Users },
             { id: "assignments", label: "Assignments", icon: Check },
-            { id: "weekly-logs", label: "Review Logs", icon: FileText },
           ].map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={cn("flex items-center gap-2 pb-2 text-md font-semibold tracking-tight transition-all relative whitespace-nowrap cursor-pointer", activeTab === tab.id ? "text-primary border-b-3 border-primary rounded-lg" : "text-slate-400 hover:text-slate-600")}>
               <tab.icon className="h-4 w-4" />
               {tab.label}
-              {tab.id === 'weekly-logs' && stats.pendingLogs > 0 && (
-                <span className="ml-1 h-5 w-5 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center font-bold">
-                  {stats.pendingLogs}
-                </span>
-              )}
             </button>
           ))}
         </div>
@@ -610,7 +603,7 @@ export default function SupervisorDashboard() {
                               <p className="text-xs text-slate-500">Submitted Week {log.weekNumber} Logbook</p>
                             </div>
                           </div>
-                          <Button size="sm" className="cursor-pointer" onClick={() => { setSelectedWeeklyLog(log); setShowReviewModal(true); setActiveTab('weekly-logs'); }}>Review</Button>
+                          <Button size="sm" className="cursor-pointer" onClick={() => { router.push(`/supervisor/${supervisorId}/logbook?logId=${log.id}`); }}>Review</Button>
                         </div>
                       ))
                     )}
@@ -628,7 +621,7 @@ export default function SupervisorDashboard() {
                     {students.slice(0, 5).map(student => (
                       <div key={student.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                         <span className="text-sm font-medium text-slate-700">{student.user?.name || student.name}</span>
-                        <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-primary" onClick={() => setActiveTab('students')}>View Details</Button>
+                        <Button variant="ghost" size="sm" className="h-8 text-xs font-bold text-primary" onClick={() => router.push(`/supervisor/${supervisorId}/ratings`)}>View Details</Button>
                       </div>
                     ))}
                   </div>
@@ -638,137 +631,6 @@ export default function SupervisorDashboard() {
           </motion.div>
         )}
 
-        {activeTab === "students" && (
-          <motion.div
-            key="students"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 pb-10 pr-2 hide-scrollbar"
-          >
-            {students.map((student) => {
-              const studentTasks = tasks.filter((t) => t.studentId === student.id);
-              const totalTasks = studentTasks.length || 0;
-              const completed = studentTasks.filter((t) => t.status === "COMPLETED").length;
-              const progress = totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0;
-              const initials = student.user?.name
-                ? student.user.name.split(" ").map((n: any) => n[0]).join("")
-                : "ST";
-              const status =
-                progress >= 80 ? "Excellent" : progress < 50 && totalTasks > 0 ? "Behind" : "On Track";
-
-              return (
-                <Card key={student.id} className="hover:border-primary/50 transition-colors group cursor-pointer">
-                  <CardContent className="p-6 flex flex-col items-center text-center">
-                    <div className="relative mb-4">
-                      {/* Progress Ring */}
-                      <div className="h-24 w-24 rounded-full border-4 border-neutral/10 flex items-center justify-center relative">
-                        <svg
-                          className="absolute inset-0 h-full w-full -rotate-90"
-                          viewBox="0 0 100 100"
-                        >
-                          <circle
-                            cx="50"
-                            cy="50"
-                            r="46"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="8"
-                            className="text-primary"
-                            strokeDasharray={`${progress * 2.89} 289`}
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center text-xl font-bold text-primary">
-                          {initials}
-                        </div>
-                      </div>
-                      <span className="absolute bottom-0 right-0 h-6 w-6 rounded-full bg-white border border-neutral/10 flex items-center justify-center shadow-sm">
-                        <span
-                          className={cn(
-                            "h-2.5 w-2.5 rounded-full",
-                            status === "Excellent"
-                              ? "bg-green-500"
-                              : status === "Behind"
-                                ? "bg-red-500"
-                                : "bg-yellow-500"
-                          )}
-                        ></span>
-                      </span>
-                    </div>
-
-                    <h3 className="font-bold text-lg text-primary mb-1">
-                      {student.user?.name || student.name}
-                    </h3>
-                    <p className="text-sm text-primary mb-1">{progress}% Tasks Completed</p>
-                    <p className="text-xs text-muted-foreground mb-4">{completed}/{totalTasks} tasks done</p>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">Work Logs</span>
-                        <span className="text-sm font-bold text-slate-700">{weeklyLogs.filter(l => l.studentId === student.id).length} Total</span>
-                      </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">To Review</span>
-                        <span className="text-sm font-bold text-amber-600">{weeklyLogs.filter(l => l.studentId === student.id && l.status === 'SUBMITTED').length} Pending</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-3 w-full pt-4">
-                      <div className="flex gap-2 w-full">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 text-[13px] font-md h-10 cursor-pointer border-2 hover:bg-primary hover:text-white transition-all border-slate-900"
-                          onClick={() => {
-                            setSelectedStudent(student);
-                            setShowProfileModal(true);
-                          }}
-                        >
-                          View Profile
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 text-[13px] font-md h-10 cursor-pointer border-2 hover:bg-primary hover:text-white transition-all border-slate-900"
-                          onClick={() => {
-                            router.push(`/supervisor/${supervisorId}/ratings/${student.id}`);
-                          }}
-                        >
-                          Rate Student
-                        </Button>
-                      </div>
-
-                      <Button
-                        size="sm"
-                        className="w-full text-xs h-10 bg-slate-900 text-white hover:bg-black shadow-md transition-all active:scale-95 cursor-pointer"
-                        onClick={() => {
-                          setActiveTab('weekly-logs');
-                          setLogFilter('ALL');
-                          setStudentSearch(student.user?.name || student.name || "");
-                        }}
-                      >
-                        <FileText className="h-3.5 w-3.5 mr-1" />
-                        Review Logbooks
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="w-full text-xs h-10 bg-primary text-white hover:bg-primary/90 shadow-md transition-all active:scale-95 cursor-pointer"
-                        onClick={() => {
-                          setNewTask({ ...newTask, studentId: student.id });
-                          setShowTaskModal(true);
-                        }}
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" />
-                        Assign New Task
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </motion.div>
-        )}
 
         {activeTab === "assignments" && (
           <motion.div
@@ -884,152 +746,6 @@ export default function SupervisorDashboard() {
           </motion.div>
         )}
 
-        {activeTab === "weekly-logs" && (
-          <motion.div
-            key="weekly-logs"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="flex-1 overflow-y-auto space-y-8 pr-2  pb-10"
-          >
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-              <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
-                <button
-                  onClick={() => setLogFilter('SUBMITTED')}
-                  className={cn(
-                    "px-6 py-2 rounded-xl text-sm font-bold transition-all",
-                    logFilter === 'SUBMITTED' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
-                  )}
-                >
-                  Pending Review ({weeklyLogs.filter(l => l.status === 'SUBMITTED').length})
-                </button>
-                <button
-                  onClick={() => setLogFilter('ALL')}
-                  className={cn(
-                    "px-6 py-2 rounded-xl text-sm font-bold transition-all",
-                    logFilter === 'ALL' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
-                  )}
-                >
-                  History Archive
-                </button>
-              </div>
-              <div className="relative w-full md:w-64">
-                <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  className="pl-11 pr-10 h-11 rounded-2xl border-slate-100 text-sm focus:ring-primary/20"
-                  placeholder="Filter by student..."
-                  value={studentSearch}
-                  onChange={(e) => setStudentSearch(e.target.value)}
-                />
-                {studentSearch && (
-                  <button
-                    onClick={() => setStudentSearch("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors"
-                  >
-                    <X className="h-3 w-3 text-slate-400 hover:text-slate-900" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(() => {
-                const filtered = weeklyLogs.filter(l => {
-                  const statusMatch = logFilter === 'ALL' ? true : l.status === 'SUBMITTED';
-                  const studentMatch = l.student?.user.name.toLowerCase().includes(studentSearch.toLowerCase());
-                  return statusMatch && studentMatch;
-                });
-
-                if (filtered.length === 0) {
-                  return (
-                    <Card className="col-span-full py-20 text-center border-2 border-dashed border-slate-200 bg-slate-50/30 rounded-3xl">
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="p-4 bg-white rounded-2xl shadow-sm">
-                          <FileText className="h-10 w-10 text-slate-300" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-bold text-slate-900">
-                            {logFilter === 'SUBMITTED' ? "No pending reviews!" : "No logs found matching criteria"}
-                          </h3>
-                          <p className="text-sm text-slate-500 max-w-[280px] mx-auto mt-1">
-                            {logFilter === 'SUBMITTED'
-                              ? "All caught up with submissions."
-                              : "Try adjusting your search or filters."}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                }
-
-                return (
-                  <div className="col-span-full max-h-[calc(100vh-400px)] overflow-y-auto pr-2 custom-scrollbar">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-4">
-                      {filtered.map(log => (
-                        <Card
-                          key={log.id}
-                          className={cn(
-                            "hover:shadow-xl transition-all border shadow-sm cursor-pointer group rounded-2xl overflow-hidden h-full",
-                            log.status === 'SUBMITTED' ? "border-amber-200 bg-amber-50/30" : "border-slate-100 bg-white"
-                          )}
-                          onClick={() => { setSelectedWeeklyLog(log); setShowReviewModal(true); }}
-                        >
-                          <CardHeader className={cn(
-                            "pb-3 border-b bg-white/50",
-                            log.status === 'SUBMITTED' ? "border-amber-100" : "border-slate-50"
-                          )}>
-                            <div className="flex justify-between items-start">
-                              <div className="flex items-center gap-3">
-                                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shadow-sm border border-primary/10">
-                                  {log.student?.user.name.split(" ").map(n => n[0]).join("") || "ST"}
-                                </div>
-                                <div>
-                                  <CardTitle className="text-base font-bold text-slate-900">{log.student?.user.name}</CardTitle>
-                                  <CardDescription className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
-                                    Week {log.weekNumber} • {log.status}
-                                  </CardDescription>
-                                </div>
-                              </div>
-                              <span className={cn(
-                                "text-[10px] font-black uppercase px-3 py-1.5 rounded-xl border",
-                                log.status === 'SUBMITTED' ? "bg-amber-100 text-amber-700 border-amber-200 animate-pulse" :
-                                  log.status === 'APPROVED' ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
-                                    "bg-red-100 text-red-700 border-red-200"
-                              )}>
-                                {log.status === 'SUBMITTED' ? 'Review Needed' : log.status}
-                              </span>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pt-5 bg-white">
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-500">Period:</span>
-                                <span className="font-bold text-slate-900">{new Date(log.startDate).toLocaleDateString()} - {new Date(log.endDate).toLocaleDateString()}</span>
-                              </div>
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-500">Work Hours:</span>
-                                <span className="font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-lg">{log.totalHours || 0} Hours</span>
-                              </div>
-                              <p className="text-xs text-slate-500 line-clamp-2 italic border-l-2 border-slate-200 pl-3 py-1 mt-2">
-                                "{log.generalStatement || "No summary provided."}"
-                              </p>
-                              <div className="pt-4 flex justify-end items-center gap-2">
-                                <Button size="sm" variant="outline" className="h-8 text-[10px] font-bold border-2 border-slate-900 hover:bg-slate-900 hover:text-white transition-all">View Details</Button>
-                                {log.status === 'SUBMITTED' && (
-                                  <Button size="sm" className="h-8 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-all">Review Now</Button>
-                                )}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div >
-          </motion.div >
-        )}
 
       </AnimatePresence >
 

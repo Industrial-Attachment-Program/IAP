@@ -77,7 +77,7 @@ export function Sidebar({ role, userId: propUserId }: SidebarProps) {
         student: [
             { href: `/student/${user?.studentId || user?.studentProfile?.id || user?.id || propUserId}`, label: "Dashboard", icon: LayoutDashboard },
             { href: "/student/logbook", label: "Logbook", icon: FileText },
-            { href: "/student/tasks", label: "My Tasks", icon: Check },
+            { href: "/student/tasks", label: "Tasks", icon: Check },
         ],
         liaison: [
             { href: `/liaison/${user?.liaisonId || user?.liaisonProfile?.id || user?.id || propUserId}`, label: "Portal", icon: LayoutDashboard },
