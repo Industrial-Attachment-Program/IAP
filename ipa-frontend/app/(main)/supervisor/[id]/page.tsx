@@ -18,8 +18,6 @@ import {
   AlertCircle,
   Clock,
   RefreshCw,
-  MessageSquare,
-  Loader2,
 } from "lucide-react";
 import { toast, Toaster } from "react-hot-toast";
 import { apiFetch } from "@/lib/api";
@@ -131,8 +129,7 @@ interface AssessmentData {
 
 // ----- Component -----
 export default function SupervisorDashboard() {
-  const [activeTab, setActiveTab] = useState<"overview" | "students" | "tasks" | "weekly-logs">("overview");
-  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "students" | "assignments" | "weekly-logs">("overview");
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -144,6 +141,8 @@ export default function SupervisorDashboard() {
   const [weeklyLogs, setWeeklyLogs] = useState<WeeklyLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [logFilter, setLogFilter] = useState<'SUBMITTED' | 'ALL'>('SUBMITTED');
+  const [studentSearch, setStudentSearch] = useState("");
 
   const router = useRouter();
   useEffect(() => {
@@ -209,7 +208,6 @@ export default function SupervisorDashboard() {
       const user = JSON.parse(storedUser);
       const userRole = user.role?.toUpperCase();
 
-      // Better supervisorId resolution
       let effectiveSupervisorId = supervisorId;
       if (!effectiveSupervisorId && user.supervisorProfile?.id) {
         effectiveSupervisorId = user.supervisorProfile.id;
@@ -218,8 +216,6 @@ export default function SupervisorDashboard() {
         effectiveSupervisorId = user.id;
       }
 
-      // Update state if we found a better ID
-      // ... actually, we should use a ref or just use the local variable in handleRateTask
 
       const userSupervisorId = Number(user.supervisorId || user.supervisorProfile?.id || user.id);
 
@@ -282,7 +278,6 @@ export default function SupervisorDashboard() {
     if (isAuthorized && supervisorId) {
       fetchAllData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthorized, supervisorId]);
 
   if (isAuthorized === null) {
@@ -318,39 +313,13 @@ export default function SupervisorDashboard() {
     );
   }
 
-  // Computed Stats for Overview
+
   const stats = {
     totalStudents: students.length,
     pendingLogs: weeklyLogs.filter(l => l.status === 'SUBMITTED').length,
     activeTasks: tasks.filter(t => ['PENDING', 'IN_PROGRESS', 'SUBMITTED'].includes(t.status)).length,
     completedTasks: tasks.filter(t => t.status === 'COMPLETED').length,
     urgentLogs: weeklyLogs.filter(l => l.status === 'SUBMITTED').length // Placeholder for actual logic
-  };
-
-
-  // ----- Task Handlers -----
-  const handleApproveTask = async (taskId: string) => {
-    try {
-      await apiFetch("/tasks", {
-        method: "PATCH",
-        body: JSON.stringify({ taskId, status: "COMPLETED" }),
-      });
-      fetchTasks();
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const handleRejectTask = async (taskId: string) => {
-    try {
-      await apiFetch("/tasks", {
-        method: "PATCH",
-        body: JSON.stringify({ taskId, status: "PENDING" }),
-      });
-      fetchTasks();
-    } catch (error) {
-      console.error(error);
-    }
   };
 
   const handleAssignTask = async () => {
@@ -387,7 +356,6 @@ export default function SupervisorDashboard() {
       }
 
       if (selectedTask) {
-        // Rate a specific task
         await apiFetch("/tasks", {
           method: "PATCH",
           body: JSON.stringify({
@@ -399,8 +367,6 @@ export default function SupervisorDashboard() {
           }),
         });
       } else if (selectedStudent) {
-        // Rate the student (Final Assessment) - Simplified version if needed, 
-        // but now we have a detailed one.
         await apiFetch("/ratings", {
           method: "POST",
           body: JSON.stringify({
@@ -415,7 +381,6 @@ export default function SupervisorDashboard() {
 
       fetchAllData();
       toast.success(selectedTask ? "Task rated successfully" : "Student assessment completed");
-      setShowRatingModal(false);
       setSelectedTask(null);
       setSelectedStudent(null);
       setRatingValue(7);
@@ -439,13 +404,11 @@ export default function SupervisorDashboard() {
         }
       }
 
-      // 1. Update Student's absentDays
       await apiFetch(`/students/${selectedStudent.id}`, {
         method: "PATCH",
         body: JSON.stringify({ absentDays: assessment.absentDays })
       });
 
-      // 2. Submit detailed final assessment rating
       const totalScore =
         assessment.knowledgeWirelessOps + assessment.knowledgeWirelessEst + assessment.knowledgeWirelessMaint + assessment.knowledgeApplication +
         assessment.responsibility + assessment.cooperativeness + assessment.complianceEtiquette +
@@ -471,7 +434,6 @@ export default function SupervisorDashboard() {
         }),
       });
 
-      // 3. Submit Employer Copy Form
       await apiFetch("/iap-reports", {
         method: "POST",
         body: JSON.stringify({
@@ -493,7 +455,6 @@ export default function SupervisorDashboard() {
       });
 
       toast.success("Industrial assessment submitted and synced");
-      setShowRatingModal(false);
       setSelectedStudent(null);
       fetchAllData();
     } catch (error) {
@@ -541,15 +502,15 @@ export default function SupervisorDashboard() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-neutral/10 pb-6 shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-neutral/10 pb-6 shrink-0 mb-8">
         <div className="flex gap-8 overflow-x-auto pb-2 md:pb-0">
           {[
             { id: "overview", label: "Overview", icon: LayoutDashboard },
             { id: "students", label: "My Students", icon: Users },
-            { id: "tasks", label: "Task Board", icon: Check },
+            { id: "assignments", label: "Assignments", icon: Check },
             { id: "weekly-logs", label: "Review Logs", icon: FileText },
           ].map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={cn("flex items-center gap-2 pb-2 text-sm font-medium transition-colors relative whitespace-nowrap cursor-pointer", activeTab === tab.id ? "text-primary border-b-2 border-primary" : "text-primary/60 hover:text-primary")}>
+            <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={cn("flex items-center gap-2 pb-2 text-md font-semibold tracking-tight transition-all relative whitespace-nowrap cursor-pointer", activeTab === tab.id ? "text-primary border-b-3 border-primary rounded-lg" : "text-slate-400 hover:text-slate-600")}>
               <tab.icon className="h-4 w-4" />
               {tab.label}
               {tab.id === 'weekly-logs' && stats.pendingLogs > 0 && (
@@ -734,12 +695,12 @@ export default function SupervisorDashboard() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">Tasks</span>
-                        <span className="text-sm font-bold text-slate-700">{tasks.filter(t => t.studentId === student.id).length} Total</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">Work Logs</span>
+                        <span className="text-sm font-bold text-slate-700">{weeklyLogs.filter(l => l.studentId === student.id).length} Total</span>
                       </div>
                       <div className="flex flex-col items-end">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">Pending</span>
-                        <span className="text-sm font-bold text-amber-600">{tasks.filter(t => t.studentId === student.id && t.status === 'SUBMITTED').length} Review</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">To Review</span>
+                        <span className="text-sm font-bold text-amber-600">{weeklyLogs.filter(l => l.studentId === student.id && l.status === 'SUBMITTED').length} Pending</span>
                       </div>
                     </div>
 
@@ -748,7 +709,7 @@ export default function SupervisorDashboard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="flex-1 text-xs h-9 cursor-pointer"
+                          className="flex-1 text-[13px] font-md h-10 cursor-pointer border-2 hover:bg-primary hover:text-white transition-all border-slate-900"
                           onClick={() => {
                             setSelectedStudent(student);
                             setShowProfileModal(true);
@@ -759,17 +720,27 @@ export default function SupervisorDashboard() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="flex-1 text-xs h-9 cursor-pointer"
+                          className="flex-1 text-[13px] font-md h-10 cursor-pointer border-2 hover:bg-primary hover:text-white transition-all border-slate-900"
                           onClick={() => {
-                            setSelectedStudent(student);
-                            setRatingValue(80); // Default 80% for student assessment
-                            setShowRatingModal(true);
+                            router.push(`/supervisor/${supervisorId}/ratings/${student.id}`);
                           }}
                         >
                           Rate Student
                         </Button>
                       </div>
 
+                      <Button
+                        size="sm"
+                        className="w-full text-xs h-10 bg-slate-900 text-white hover:bg-black shadow-md transition-all active:scale-95 cursor-pointer"
+                        onClick={() => {
+                          setActiveTab('weekly-logs');
+                          setLogFilter('ALL');
+                          setStudentSearch(student.user?.name || student.name || "");
+                        }}
+                      >
+                        <FileText className="h-3.5 w-3.5 mr-1" />
+                        Review Logbooks
+                      </Button>
                       <Button
                         size="sm"
                         className="w-full text-xs h-10 bg-primary text-white hover:bg-primary/90 shadow-md transition-all active:scale-95 cursor-pointer"
@@ -789,56 +760,117 @@ export default function SupervisorDashboard() {
           </motion.div>
         )}
 
-        {activeTab === "tasks" && (
+        {activeTab === "assignments" && (
           <motion.div
-            key="tasks"
+            key="assignments"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 mt-4 min-h-0"
+            className="flex-1 overflow-y-auto space-y-8 pr-2 hide-scrollbar pb-10"
           >
-            {[
-              { status: "PENDING", label: "To Do", color: "bg-slate-100 text-slate-700" },
-              { status: "IN_PROGRESS", label: "In Progress", color: "bg-blue-100 text-blue-700" },
-              { status: "SUBMITTED", label: "Needs Review", color: "bg-amber-100 text-amber-700 border border-amber-200" },
-              { status: "COMPLETED", label: "Completed", color: "bg-green-100 text-green-700" },
-            ].map(column => (
-              <div key={column.status} className="flex flex-col gap-4 h-full min-h-0">
-                <div className={cn("p-3 rounded-xl font-bold text-sm flex items-center justify-between shrink-0", column.color)}>
-                  {column.label}
-                  <span className="bg-white/50 px-2 py-0.5 rounded text-[10px]">{tasks.filter(t => t.status === column.status).length}</span>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 p-8 rounded-4xl text-white shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-5">
+                <Check className="h-40 w-40" />
+              </div>
+              <div className="relative z-10">
+                <h2 className="text-2xl font-black uppercase tracking-tight">Task Command & Control</h2>
+                <p className="text-white/50 text-normal font-md mt-1">Manage institutional assignments and monitor student submissions</p>
+              </div>
+              <Button
+                onClick={() => setShowTaskModal(true)}
+                className="bg-primary hover:bg-white hover:text-primary text-white px-8 h-12 rounded-2xl font-medium text-md transition-all relative z-10"
+              >
+                <Plus className="h-4 w-4 mr-2" /> Issue New Assignment
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Pending Reviews */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b-2 border-amber-100 pb-3">
+                  <div className="h-8 w-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                  <h3 className="text-md font-bold text-slate-700">Awaiting Submission Review</h3>
                 </div>
-                <div className="flex-1 flex flex-col gap-3 overflow-y-auto bg-slate-50/50 p-2 rounded-2xl border-2 border-dashed border-slate-200 min-h-0 hide-scrollbar">
-                  {tasks.filter(t => t.status === column.status).map(task => (
-                    <Card key={task.id} className="hover:shadow-md transition-shadow cursor-pointer group shrink-0" onClick={() => {
-                      setSelectedTask(task);
-                      setRatingValue(10); // Default 10 for task rating
-                      if (task.status === 'SUBMITTED') setShowRatingModal(true);
-                    }}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                            {task.student?.user?.name.split(" ").map(n => n[0]).join("") || "ST"}
+
+                <div className="grid gap-4">
+                  {tasks.filter(t => t.status === 'SUBMITTED').length === 0 ? (
+                    <div className="py-12 text-center bg-white border-2 border-dashed border-slate-100 rounded-3xl">
+                      <p className="text-xs font-bold text-slate-300 ">No pending reviews</p>
+                    </div>
+                  ) : tasks.filter(t => t.status === 'SUBMITTED').map(task => (
+                    <Card key={task.id} className="border-2 border-slate-100 rounded-3xl hover:border-primary/20 transition-all group overflow-hidden bg-white hover:shadow-xl hover:shadow-slate-100">
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xs">
+                              {task.student?.user.name[0]}
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black text-slate-400 ">Assigned to</p>
+                              <p className="text-xs font-black text-slate-900">{task.student?.user.name}</p>
+                            </div>
                           </div>
-                          <span className="text-[10px] font-bold text-slate-500">{task.student?.user?.name}</span>
+                          <span className="text-[9px] font-black bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full border border-amber-200">Pending Review</span>
                         </div>
-                        <h4 className="font-bold text-sm text-slate-900 group-hover:text-primary transition-colors">{task.title}</h4>
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{task.description}</p>
-                        <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center">
-                          <span className="text-[10px] text-slate-400 font-medium">{new Date(task.date).toLocaleDateString()}</span>
-                          {column.status === 'SUBMITTED' && (
-                            <Button size="sm" variant="secondary" className="h-6 text-[10px] font-bold rounded-lg px-2">Review</Button>
-                          )}
+                        <h4 className="text-sm font-black text-slate-900 group-hover:text-primary transition-colors">{task.title}</h4>
+                        <p className="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">{task.description}</p>
+                        <div className="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-slate-400 tracking-tighter">Due: {new Date(task.date).toLocaleDateString()}</span>
+                          <Button
+                            onClick={() => {
+                              setSelectedTask(task);
+                              router.push(`/supervisor/${supervisorId}/ratings/${task.studentId}`);
+                            }}
+                            className="h-8 bg-slate-900 hover:bg-black text-white text-[10px] font-black  px-4 rounded-xl"
+                          >
+                            Review Submission
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
-                  {tasks.filter(t => t.status === column.status).length === 0 && (
-                    <div className="flex-1 flex items-center justify-center text-slate-300 text-xs italic">Empty</div>
-                  )}
                 </div>
               </div>
-            ))}
+
+              {/* Active & Completed */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b-2 border-slate-100 pb-3">
+                  <div className="h-8 w-8 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center">
+                    <LayoutDashboard className="h-4 w-4" />
+                  </div>
+                  <h3 className="text-md font-bold text-slate-700">Active institutional Tasks</h3>
+                </div>
+
+                <div className="grid gap-4">
+                  {tasks.filter(t => t.status !== 'SUBMITTED').length === 0 ? (
+                    <div className="py-12 text-center bg-white border-2 border-dashed border-slate-100 rounded-3xl">
+                      <p className="text-xs font-bold text-slate-300">No active tasks</p>
+                    </div>
+                  ) : tasks.filter(t => t.status !== 'SUBMITTED').map(task => (
+                    <div key={task.id} className="p-5 bg-white border-2 border-slate-100 rounded-2xl flex items-center justify-between group hover:border-slate-200 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center",
+                          task.status === 'COMPLETED' ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400"
+                        )}>
+                          {task.status === 'COMPLETED' ? <Check className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
+                        </div>
+                        <div>
+                          <h4 className="text-md font-semibold text-slate-900">{task.title}</h4>
+                          <p className="text-xs font-semibold text-slate-400">{task.student?.user.name}</p>
+                        </div>
+                      </div>
+                      <span className={cn("text-[8px] font-black uppercase px-2 py-1 rounded-md",
+                        task.status === 'COMPLETED' ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+                      )}>
+                        {task.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </motion.div>
         )}
 
@@ -848,451 +880,219 @@ export default function SupervisorDashboard() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex-1 overflow-y-auto space-y-6 pr-2 hide-scrollbar"
+            className="flex-1 overflow-y-auto space-y-8 pr-2  pb-10"
           >
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+              <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1">
+                <button
+                  onClick={() => setLogFilter('SUBMITTED')}
+                  className={cn(
+                    "px-6 py-2 rounded-xl text-sm font-bold transition-all",
+                    logFilter === 'SUBMITTED' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  Pending Review ({weeklyLogs.filter(l => l.status === 'SUBMITTED').length})
+                </button>
+                <button
+                  onClick={() => setLogFilter('ALL')}
+                  className={cn(
+                    "px-6 py-2 rounded-xl text-sm font-bold transition-all",
+                    logFilter === 'ALL' ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  )}
+                >
+                  History Archive
+                </button>
+              </div>
+              <div className="relative w-full md:w-64">
+                <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  className="pl-11 pr-10 h-11 rounded-2xl border-slate-100 text-sm focus:ring-primary/20"
+                  placeholder="Filter by student..."
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                />
+                {studentSearch && (
+                  <button
+                    onClick={() => setStudentSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors"
+                  >
+                    <X className="h-3 w-3 text-slate-400 hover:text-slate-900" />
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {weeklyLogs.filter(l => l.status === 'SUBMITTED').length === 0 ? (
-                <Card className="col-span-full py-20 text-center border-2 border-dashed border-slate-200 bg-slate-50/30 rounded-3xl">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="p-4 bg-white rounded-2xl shadow-sm">
-                      <FileText className="h-10 w-10 text-slate-300" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-900">All caught up!</h3>
-                      <p className="text-sm text-slate-500 max-w-[280px] mx-auto mt-1">No pending weekly logbooks require your review at this time.</p>
+              {(() => {
+                const filtered = weeklyLogs.filter(l => {
+                  const statusMatch = logFilter === 'ALL' ? true : l.status === 'SUBMITTED';
+                  const studentMatch = l.student?.user.name.toLowerCase().includes(studentSearch.toLowerCase());
+                  return statusMatch && studentMatch;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <Card className="col-span-full py-20 text-center border-2 border-dashed border-slate-200 bg-slate-50/30 rounded-3xl">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="p-4 bg-white rounded-2xl shadow-sm">
+                          <FileText className="h-10 w-10 text-slate-300" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-900">
+                            {logFilter === 'SUBMITTED' ? "No pending reviews!" : "No logs found matching criteria"}
+                          </h3>
+                          <p className="text-sm text-slate-500 max-w-[280px] mx-auto mt-1">
+                            {logFilter === 'SUBMITTED'
+                              ? "All caught up with submissions."
+                              : "Try adjusting your search or filters."}
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                }
+
+                return (
+                  <div className="col-span-full max-h-[calc(100vh-400px)] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-4">
+                      {filtered.map(log => (
+                        <Card
+                          key={log.id}
+                          className={cn(
+                            "hover:shadow-xl transition-all border shadow-sm cursor-pointer group rounded-2xl overflow-hidden h-full",
+                            log.status === 'SUBMITTED' ? "border-amber-200 bg-amber-50/30" : "border-slate-100 bg-white"
+                          )}
+                          onClick={() => { setSelectedWeeklyLog(log); setShowReviewModal(true); }}
+                        >
+                          <CardHeader className={cn(
+                            "pb-3 border-b bg-white/50",
+                            log.status === 'SUBMITTED' ? "border-amber-100" : "border-slate-50"
+                          )}>
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-center gap-3">
+                                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shadow-sm border border-primary/10">
+                                  {log.student?.user.name.split(" ").map(n => n[0]).join("") || "ST"}
+                                </div>
+                                <div>
+                                  <CardTitle className="text-base font-bold text-slate-900">{log.student?.user.name}</CardTitle>
+                                  <CardDescription className="text-[10px] font-medium uppercase tracking-wider text-slate-500">
+                                    Week {log.weekNumber} • {log.status}
+                                  </CardDescription>
+                                </div>
+                              </div>
+                              <span className={cn(
+                                "text-[10px] font-black uppercase px-3 py-1.5 rounded-xl border",
+                                log.status === 'SUBMITTED' ? "bg-amber-100 text-amber-700 border-amber-200 animate-pulse" :
+                                  log.status === 'APPROVED' ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
+                                    "bg-red-100 text-red-700 border-red-200"
+                              )}>
+                                {log.status === 'SUBMITTED' ? 'Review Needed' : log.status}
+                              </span>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="pt-5 bg-white">
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-500">Period:</span>
+                                <span className="font-bold text-slate-900">{new Date(log.startDate).toLocaleDateString()} - {new Date(log.endDate).toLocaleDateString()}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-500">Work Hours:</span>
+                                <span className="font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-lg">{log.totalHours || 0} Hours</span>
+                              </div>
+                              <p className="text-xs text-slate-500 line-clamp-2 italic border-l-2 border-slate-200 pl-3 py-1 mt-2">
+                                "{log.generalStatement || "No summary provided."}"
+                              </p>
+                              <div className="pt-4 flex justify-end items-center gap-2">
+                                <Button size="sm" variant="outline" className="h-8 text-[10px] font-bold border-2 border-slate-900 hover:bg-slate-900 hover:text-white transition-all">View Details</Button>
+                                {log.status === 'SUBMITTED' && (
+                                  <Button size="sm" className="h-8 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-all">Review Now</Button>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
                   </div>
-                </Card>
-              ) : (
-                weeklyLogs.filter(l => l.status === 'SUBMITTED').map(log => (
-                  <Card key={log.id} className="hover:shadow-xl transition-all border-amber-200 bg-amber-50/30 shadow-sm cursor-pointer group rounded-2xl overflow-hidden border-2" onClick={() => { setSelectedWeeklyLog(log); setShowReviewModal(true); }}>
-                    <CardHeader className="pb-3 border-b border-amber-100 bg-white/50">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shadow-sm border border-primary/10">
-                            {log.student?.user.name.split(" ").map(n => n[0]).join("") || "ST"}
-                          </div>
-                          <div>
-                            <CardTitle className="text-base font-bold text-slate-900">{log.student?.user.name}</CardTitle>
-                            <CardDescription className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Submitted Week {log.weekNumber}</CardDescription>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-bold uppercase px-3 py-1.5 rounded-xl bg-amber-100 text-amber-700 border border-amber-200 animate-pulse">
-                          Pending
-                        </span>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-5 bg-white">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-500">Period:</span>
-                          <span className="font-bold text-slate-900">{new Date(log.startDate).toLocaleDateString()} - {new Date(log.endDate).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-500">Work Hours:</span>
-                          <span className="font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-lg">{log.totalHours || 0} Hours</span>
-                        </div>
-                        <p className="text-xs text-slate-500 line-clamp-2 italic border-l-2 border-slate-200 pl-3 py-1 mt-2">
-                          "{log.generalStatement || "No summary provided."}"
-                        </p>
-                        <div className="pt-4 flex justify-end items-center gap-2">
-                          <Button size="sm" variant="outline" className="h-9 text-xs font-bold rounded-xl border-slate-200 text-slate-600 cursor-pointer">View Draft</Button>
-                          <Button size="sm" className="h-9 px-5 text-xs font-bold rounded-xl bg-primary text-white shadow-md shadow-primary/10 group-hover:scale-[1.02] transition-transform cursor-pointer">Review Now</Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </motion.div>
+                );
+              })()}
+            </div >
+          </motion.div >
         )}
 
-      </AnimatePresence>
+      </AnimatePresence >
 
       {/* Task Modal */}
       <AnimatePresence>
-        {showTaskModal && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          >
-            <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
-              <div className="p-6 border-b border-primary/10 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-primary">Assign New Task</h3>
-                <button
-                  onClick={() => setShowTaskModal(false)}
-                  className="text-primary hover:text-primary/80"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-primary mb-2 block">Task Title *</label>
-                  <Input
-                    placeholder="e.g., Design database schema"
-                    value={newTask.title}
-                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-primary mb-2 block">Description</label>
-                  <textarea
-                    className="w-full rounded-lg border border-primary/20 bg-white px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary min-h-[100px]"
-                    placeholder="Describe task..."
-                    value={newTask.description}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, description: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-primary mb-2 block">Due Date</label>
-                  <Input
-                    type="date"
-                    value={newTask.dueDate}
-                    onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="p-6 bg-primary/5 border-t border-primary/10 flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setShowTaskModal(false)}>Cancel</Button>
-                <Button
-                  onClick={handleAssignTask}
-                  className="bg-primary hover:bg-primary/90 text-white"
-                  disabled={!newTask.title || !newTask.studentId}
-                >
-                  <Check className="h-4 w-4 mr-2" /> Assign Task
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Rating Modal */}
-      <AnimatePresence>
-        {showRatingModal && (selectedStudent || selectedTask) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
-          >
+        {
+          showTaskModal && (
             <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className={cn(
-                "bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col",
-                selectedTask ? "w-full max-w-lg" : "w-full max-w-4xl max-h-[90vh]"
-              )}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
             >
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
-                <div>
-                  <h3 className="text-xl font-black text-primary tracking-tight">
-                    {selectedTask ? "Task Performance Review" : "Industrial Attachment Assessment"}
-                  </h3>
-                  <p className="text-sm text-slate-500 font-medium">
-                    {selectedTask ? `Evaluating: ${selectedTask.title}` : `Final evaluation for ${selectedStudent?.user?.name || selectedStudent?.name}`}
-                  </p>
+              <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div className="p-6 border-b border-primary/10 flex items-center justify-between">
+                  <h3 className="text-xl font-bold text-primary">Assign New Task</h3>
+                  <button
+                    onClick={() => setShowTaskModal(false)}
+                    className="text-primary hover:text-primary/80"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    setShowRatingModal(false);
-                    setSelectedTask(null);
-                  }}
-                  className="h-10 w-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-primary transition-all"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
 
-              <div className="flex-1 overflow-y-auto p-8 pt-6">
-                {selectedTask ? (
-                  <div className="space-y-6">
-                    <div className="bg-primary/5 p-5 rounded-2xl border border-primary/10">
-                      <p className="text-xs font-bold text-primary/60 uppercase tracking-widest mb-2">Internal Task Note</p>
-                      <p className="text-sm text-primary leading-relaxed">{selectedTask.description}</p>
-                    </div>
-
-                    <div className="space-y-4">
-                      <label className="text-sm font-bold text-slate-700 block">Performance Rating (1-10)</label>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="range"
-                          min={1}
-                          max={10}
-                          value={ratingValue}
-                          className="flex-1 h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-primary"
-                          onChange={(e) => setRatingValue(Number(e.target.value))}
-                        />
-                        <span className="h-12 w-12 rounded-xl bg-primary text-white flex items-center justify-center font-black text-lg shadow-lg shadow-primary/20">
-                          {ratingValue}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700 block">Supervisor Comments</label>
-                      <textarea
-                        placeholder="Provide feedback on task execution..."
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary focus:ring-4 focus:ring-primary/5 min-h-[120px] outline-none transition-all"
-                        value={ratingComment}
-                        onChange={(e) => setRatingComment(e.target.value)}
-                      />
-                    </div>
+                <div className="p-6 space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-primary mb-2 block">Task Title *</label>
+                    <Input
+                      placeholder="e.g., Design database schema"
+                      value={newTask.title}
+                      onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                    />
                   </div>
-                ) : (
-                  <div className="space-y-10">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-                      {/* Section 1: Related Knowledge */}
-                      <div className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                          <div className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">1</div>
-                          <h4 className="font-black text-slate-800 uppercase tracking-tight text-sm">Related Knowledge (40%)</h4>
-                        </div>
 
-                        {[
-                          { id: 'knowledgeWirelessOps', label: 'Support for wireless network ops' },
-                          { id: 'knowledgeWirelessEst', label: 'Establishment of wireless network' },
-                          { id: 'knowledgeWirelessMaint', label: 'Maintenance of wireless comm room' },
-                          { id: 'knowledgeApplication', label: 'Related knowledge application' },
-                        ].map(item => (
-                          <div key={item.id} className="space-y-2">
-                            <div className="flex justify-between items-center">
-                              <label className="text-xs font-bold text-slate-500 uppercase">{item.label}</label>
-                              <span className="text-xs font-black text-primary bg-primary/5 px-2 py-0.5 rounded-md">{assessment[item.id as keyof AssessmentData]}/10</span>
-                            </div>
-                            <input
-                              type="range" min="0" max="10"
-                              value={assessment[item.id as keyof AssessmentData] as number}
-                              onChange={(e) => setAssessment({ ...assessment, [item.id]: Number(e.target.value) })}
-                              className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                            />
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Section 2: Responsibility */}
-                      <div className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                          <div className="h-8 w-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm">2</div>
-                          <h4 className="font-black text-slate-800 uppercase tracking-tight text-sm">Responsibility & Attitude (30%)</h4>
-                        </div>
-
-                        {[
-                          { id: 'responsibility', label: 'Responsibility' },
-                          { id: 'cooperativeness', label: 'Cooperativeness' },
-                          { id: 'complianceEtiquette', label: 'Compliance & Etiquette' },
-                        ].map(item => (
-                          <div key={item.id} className="space-y-2">
-                            <div className="flex justify-between items-center">
-                              <label className="text-xs font-bold text-slate-500 uppercase">{item.label}</label>
-                              <span className="text-xs font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">{assessment[item.id as keyof AssessmentData]}/10</span>
-                            </div>
-                            <input
-                              type="range" min="0" max="10"
-                              value={assessment[item.id as keyof AssessmentData] as number}
-                              onChange={(e) => setAssessment({ ...assessment, [item.id]: Number(e.target.value) })}
-                              className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                            />
-                          </div>
-                        ))}
-
-                        <div className="pt-4 border-t border-slate-50">
-                          <label className="text-xs font-black text-slate-500 uppercase mb-2 block">Days of Absence (Max 100)</label>
-                          <div className="flex items-center gap-4">
-                            <Input
-                              type="number" min="0" max="100"
-                              className="h-11 font-bold text-lg"
-                              value={assessment.absentDays}
-                              onChange={(e) => setAssessment({ ...assessment, absentDays: Number(e.target.value) })}
-                            />
-                            <p className="text-[10px] text-slate-400 leading-tight">10 points deducted for each unauthorised absence.</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section 3: Safety */}
-                      <div className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                          <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">3</div>
-                          <h4 className="font-black text-slate-800 uppercase tracking-tight text-sm">Safety Management (30%)</h4>
-                        </div>
-
-                        {[
-                          { id: 'safetyAwareness', label: 'Awareness of safety mgmt' },
-                          { id: 'safetyCompliance', label: 'Compliance with safety rules' },
-                          { id: 'safetyArrangement', label: 'Arrangement of safety instruments' },
-                        ].map(item => (
-                          <div key={item.id} className="space-y-2">
-                            <div className="flex justify-between items-center">
-                              <label className="text-xs font-bold text-slate-500 uppercase">{item.label}</label>
-                              <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">{assessment[item.id as keyof AssessmentData]}/10</span>
-                            </div>
-                            <input
-                              type="range" min="0" max="10"
-                              value={assessment[item.id as keyof AssessmentData] as number}
-                              onChange={(e) => setAssessment({ ...assessment, [item.id]: Number(e.target.value) })}
-                              className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                            />
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Section 4: Employer Assessment Form */}
-                      <div className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                          <div className="h-8 w-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-sm">4</div>
-                          <h4 className="font-black text-slate-800 uppercase tracking-tight text-sm">Employer Report & Satisfaction</h4>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {[
-                            { id: 'isUseful', label: 'Was the IAP useful?' },
-                            { id: 'improvedUnderstanding', label: 'Improved Understanding?' },
-                            { id: 'providedExperiences', label: 'Provided Experience?' },
-                          ].map(item => (
-                            <div key={item.id} className="space-y-2">
-                              <label className="text-xs font-bold text-slate-500 uppercase">{item.label}</label>
-                              <select
-                                className="w-full h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                                value={assessment[item.id as keyof AssessmentData] as string || ""}
-                                onChange={(e) => setAssessment({ ...assessment, [item.id]: e.target.value })}
-                              >
-                                <option value="" disabled>Select...</option>
-                                <option value="Yes">Yes</option>
-                                <option value="No">No</option>
-                              </select>
-                            </div>
-                          ))}
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase">LO Visit Count</label>
-                            <Input
-                              type="number" min="0"
-                              className="h-11 font-bold text-sm"
-                              value={assessment.loVisitCount || 0}
-                              onChange={(e) => setAssessment({ ...assessment, loVisitCount: Number(e.target.value) })}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Satisfaction Matrix</label>
-                          {[
-                            { id: 'satisfactionIndustry', label: 'Satisfaction with Industry' },
-                            { id: 'satisfactionMajor', label: 'Satisfaction with Major' },
-                            { id: 'satisfactionPractical', label: 'Satisfaction with Practical Work' },
-                            { id: 'satisfactionInstructors', label: 'Satisfaction with Instructors' },
-                          ].map(item => (
-                            <div key={item.id} className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
-                              <span className="text-sm font-bold text-slate-700">{item.label}</span>
-                              <select
-                                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 w-32"
-                                value={assessment[item.id as keyof AssessmentData] as string || ""}
-                                onChange={(e) => setAssessment({ ...assessment, [item.id]: e.target.value })}
-                              >
-                                <option value="" disabled>-</option>
-                                <option value="Excellent">Excellent</option>
-                                <option value="Average">Average</option>
-                                <option value="Poor">Poor</option>
-                              </select>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="space-y-4 pt-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase block">Programme Checklists (Optional Details)</label>
-                          <textarea
-                            placeholder="Any other programme details completed..."
-                            className="w-full h-[80px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none resize-none transition-all"
-                            value={assessment.otherProgrammeDetails || ""}
-                            onChange={(e) => setAssessment({ ...assessment, otherProgrammeDetails: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase block">Notable Achievements</label>
-                            <textarea
-                              placeholder="List achievements..."
-                              className="w-full h-[80px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none resize-none transition-all"
-                              value={assessment.notableAchievements || ""}
-                              onChange={(e) => setAssessment({ ...assessment, notableAchievements: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase block">Suggestions</label>
-                            <textarea
-                              placeholder="Provide suggestions..."
-                              className="w-full h-[80px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none resize-none transition-all"
-                              value={assessment.suggestions || ""}
-                              onChange={(e) => setAssessment({ ...assessment, suggestions: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Footer: Overview */}
-                      <div className="space-y-6">
-                        <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                          <div className="h-8 w-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm">
-                            <MessageSquare className="h-4 w-4" />
-                          </div>
-                          <h4 className="font-black text-slate-800 uppercase tracking-tight text-sm">Overall Review</h4>
-                        </div>
-                        <textarea
-                          placeholder="Write a formal professional review of the student's performance..."
-                          className="w-full h-[140px] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-primary focus:ring-4 focus:ring-primary/5 outline-none transition-all"
-                          value={assessment.comment}
-                          onChange={(e) => setAssessment({ ...assessment, comment: e.target.value })}
-                        />
-                        <div className="p-4 rounded-2xl bg-slate-900 text-white flex justify-between items-center shadow-xl">
-                          <div>
-                            <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Total Assessment Score</p>
-                            <p className="text-2xl font-black">
-                              {assessment.knowledgeWirelessOps + assessment.knowledgeWirelessEst + assessment.knowledgeWirelessMaint + assessment.knowledgeApplication +
-                                assessment.responsibility + assessment.cooperativeness + assessment.complianceEtiquette +
-                                assessment.safetyAwareness + assessment.safetyCompliance + assessment.safetyArrangement} / 100
-                            </p>
-                          </div>
-                          <div className="h-10 w-10 rounded-full border-2 border-white/20 flex items-center justify-center font-black text-xs">
-                            {(assessment.knowledgeWirelessOps + assessment.knowledgeWirelessEst + assessment.knowledgeWirelessMaint + assessment.knowledgeApplication +
-                              assessment.responsibility + assessment.cooperativeness + assessment.complianceEtiquette +
-                              assessment.safetyAwareness + assessment.safetyCompliance + assessment.safetyArrangement) >= 80 ? 'EX' :
-                              (assessment.knowledgeWirelessOps + assessment.knowledgeWirelessEst + assessment.knowledgeWirelessMaint + assessment.knowledgeApplication +
-                                assessment.responsibility + assessment.cooperativeness + assessment.complianceEtiquette +
-                                assessment.safetyAwareness + assessment.safetyCompliance + assessment.safetyArrangement) >= 60 ? 'GD' : 'NI'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                  <div>
+                    <label className="text-sm font-medium text-primary mb-2 block">Description</label>
+                    <textarea
+                      className="w-full rounded-lg border border-primary/20 bg-white px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary min-h-[100px]"
+                      placeholder="Describe task..."
+                      value={newTask.description}
+                      onChange={(e) =>
+                        setNewTask({ ...newTask, description: e.target.value })
+                      }
+                    />
                   </div>
-                )}
-              </div>
 
-              <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
-                <Button variant="ghost" className="font-bold cursor-pointer" onClick={() => setShowRatingModal(false)}>Cancel</Button>
-                <Button
-                  onClick={selectedTask ? handleRateTask : handleSaveAssessment}
-                  className="bg-primary hover:bg-primary/90 text-white font-black px-8 rounded-xl shadow-lg shadow-primary/25 cursor-pointer"
-                  disabled={isSaving}
-                >
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
-                  {selectedTask ? "Confirm Rating" : "Finalize & Sync Assessment"}
-                </Button>
+                  <div>
+                    <label className="text-sm font-medium text-primary mb-2 block">Due Date</label>
+                    <Input
+                      type="date"
+                      value={newTask.dueDate}
+                      onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-6 bg-primary/5 border-t border-primary/10 flex justify-end gap-3">
+                  <Button variant="outline" onClick={() => setShowTaskModal(false)}>Cancel</Button>
+                  <Button
+                    onClick={handleAssignTask}
+                    className="bg-primary hover:bg-primary/90 text-white"
+                    disabled={!newTask.title || !newTask.studentId}
+                  >
+                    <Check className="h-4 w-4 mr-2" /> Assign Task
+                  </Button>
+                </div>
               </div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )
+        }
+      </AnimatePresence >
+
+      {/* Modal removed based on user request to use separate page */}
 
       {/* Profile Modal */}
       <AnimatePresence>
@@ -1316,16 +1116,13 @@ export default function SupervisorDashboard() {
 
               <div className="flex-1 overflow-y-auto p-8 space-y-8">
                 <div className="text-center">
-                  <div className="h-24 w-24 rounded-3xl bg-primary/5 mx-auto flex items-center justify-center text-3xl font-black text-primary mb-4 shadow-sm border border-primary/10">
-                    {selectedStudent.user?.name?.split(" ").map((n) => n[0]).join("") || "ST"}
-                  </div>
                   <h4 className="font-black text-2xl text-slate-900 select-all">{selectedStudent.user?.name}</h4>
-                  <p className="text-sm font-bold text-primary/60 tracking-wider uppercase mt-1">Student Intern Portfolio</p>
+                  <p className="text-md font-semibold text-primary/60 mt-1">Student Intern Portfolio</p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Digital credentials</label>
+                    <label className="text-[14px] font-black text-slate-400 uppercase tracking-wide">Digital credentials:</label>
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-500">Email Address</span>
@@ -1339,7 +1136,7 @@ export default function SupervisorDashboard() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Placement Verification</label>
+                    <label className="text-[14px] font-black text-slate-400 uppercase tracking-wide">Placement Verification:</label>
                     <div className="p-5 bg-linear-to-br from-primary to-slate-800 rounded-2xl text-white shadow-lg shadow-primary/20">
                       <p className="text-lg font-black">{selectedStudent.companyName || "No Company Assigned"}</p>
                       <p className="text-xs font-medium text-white/70 mt-1">{selectedStudent.companyAddress}</p>
@@ -1359,13 +1156,13 @@ export default function SupervisorDashboard() {
               </div>
 
               <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex justify-end">
-                <Button className="font-black px-6 rounded-xl cursor-pointer" onClick={() => setShowProfileModal(false)}>Acknowledge</Button>
+                <Button className="font-semibold px-6 rounded-xl cursor-pointer" onClick={() => setShowProfileModal(false)}>Acknowledge</Button>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-      {/* Weekly Log Review Modal */}
+
       <AnimatePresence>
         {showReviewModal && selectedWeeklyLog && (
           <motion.div
@@ -1456,7 +1253,7 @@ export default function SupervisorDashboard() {
                           />
                         </div>
                         <div className="col-span-2 space-y-2">
-                          <label className="text-xs font-bold text-slate-500">Print Name</label>
+                          <label className="text-xs font-bold text-slate-500">Supervisor Name</label>
                           <input
                             type="text"
                             id="review-name"
@@ -1512,6 +1309,7 @@ export default function SupervisorDashboard() {
                             toast.error("Grade and Name are required");
                             return;
                           }
+
                           handleApproveWeeklyLog(selectedWeeklyLog.id, {
                             grade,
                             supervisorName: name,
@@ -1539,6 +1337,6 @@ export default function SupervisorDashboard() {
         )}
       </AnimatePresence>
       <Toaster position="top-right" />
-    </div>
+    </div >
   );
 }

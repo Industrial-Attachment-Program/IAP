@@ -289,12 +289,19 @@ export class WeeklyLogsService {
         rest.supervisorDate = (rest.supervisorDate && rest.supervisorDate !== "") ? new Date(rest.supervisorDate) : null;
 
 
-        if (rest.mondayHours !== undefined) rest.mondayHours = Number(rest.mondayHours);
-        if (rest.tuesdayHours !== undefined) rest.tuesdayHours = Number(rest.tuesdayHours);
-        if (rest.wednesdayHours !== undefined) rest.wednesdayHours = Number(rest.wednesdayHours);
-        if (rest.thursdayHours !== undefined) rest.thursdayHours = Number(rest.thursdayHours);
-        if (rest.fridayHours !== undefined) rest.fridayHours = Number(rest.fridayHours);
-        if (rest.totalHours !== undefined) rest.totalHours = Number(rest.totalHours);
+        if (rest.mondayHours !== undefined) rest.mondayHours = Number(rest.mondayHours) || 8;
+        if (rest.tuesdayHours !== undefined) rest.tuesdayHours = Number(rest.tuesdayHours) || 8;
+        if (rest.wednesdayHours !== undefined) rest.wednesdayHours = Number(rest.wednesdayHours) || 8;
+        if (rest.thursdayHours !== undefined) rest.thursdayHours = Number(rest.thursdayHours) || 8;
+        if (rest.fridayHours !== undefined) rest.fridayHours = Number(rest.fridayHours) || 8;
+        if (rest.totalHours !== undefined) {
+            rest.totalHours =
+                (Number(rest.mondayHours) || 8) +
+                (Number(rest.tuesdayHours) || 8) +
+                (Number(rest.wednesdayHours) || 8) +
+                (Number(rest.thursdayHours) || 8) +
+                (Number(rest.fridayHours) || 8);
+        }
 
 
         const {

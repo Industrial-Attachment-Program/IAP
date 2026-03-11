@@ -71,8 +71,8 @@ export function Sidebar({ role, userId: propUserId }: SidebarProps) {
         ],
         supervisor: [
             { href: `/supervisor/${user?.supervisorId || user?.supervisorProfile?.id || user?.id || propUserId}`, label: "Dashboard", icon: LayoutDashboard },
-            { href: "/supervisor/students", label: "My Students", icon: Users },
-            { href: "/supervisor/ratings", label: "Ratings", icon: FileText },
+            { href: `/supervisor/${user?.supervisorId || user?.supervisorProfile?.id || user?.id || propUserId}/ratings`, label: "Ratings", icon: Users },
+            { href: `/supervisor/${user?.supervisorId || user?.supervisorProfile?.id || user?.id || propUserId}/logbook`, label: "Logbook", icon: FileText },
         ],
         student: [
             { href: `/student/${user?.studentId || user?.studentProfile?.id || user?.id || propUserId}`, label: "Dashboard", icon: LayoutDashboard },

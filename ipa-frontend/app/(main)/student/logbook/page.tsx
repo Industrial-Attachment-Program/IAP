@@ -204,12 +204,20 @@ export default function StudentLogbookPage() {
             status: "DRAFT"
         };
 
-        return existing ? { ...baseLog, ...existing } : baseLog;
+        const merged = existing ? { ...baseLog, ...existing } : baseLog;
+        merged.mondayHours = merged.mondayHours || 8;
+        merged.tuesdayHours = merged.tuesdayHours || 8;
+        merged.wednesdayHours = merged.wednesdayHours || 8;
+        merged.thursdayHours = merged.thursdayHours || 8;
+        merged.fridayHours = merged.fridayHours || 8;
+
+        merged.totalHours = (Number(merged.mondayHours)) + (Number(merged.tuesdayHours)) + (Number(merged.wednesdayHours)) + (Number(merged.thursdayHours)) + (Number(merged.fridayHours));
+
+        return merged;
     };
 
     useEffect(() => {
         fetchData();
-        // Removed auto-refresh to prevent data loss while typing
     }, []);
 
     const fetchData = async () => {
@@ -217,7 +225,7 @@ export default function StudentLogbookPage() {
         try {
             const storedUserRaw = localStorage.getItem("user");
             if (!storedUserRaw || storedUserRaw === "{}") {
-                return; // MainLayout handles redirect
+                return;
             }
 
             const storedUser = JSON.parse(storedUserRaw);
@@ -416,12 +424,9 @@ export default function StudentLogbookPage() {
     const generatePDF = () => {
         const doc = new jsPDF() as any;
 
-        // Jost is a clean geometric sans-serif. Since embedding custom TTF requires a local file or base64,
-        // we'll use Helvetica/Arial as the standard geometric sans fallback which looks similar in PDF prints.
         const fontName = "helvetica";
         const primaryColor: [number, number, number] = [26, 38, 74];
 
-        // PAGE 1: COVER
         doc.setFillColor(255, 255, 255);
         doc.rect(0, 0, 210, 297, 'F');
         doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -465,7 +470,7 @@ export default function StudentLogbookPage() {
         y += 8;
         doc.text(`P.O.Box: ${student?.companyPOBox || "_________________________________________________"}`, 25, y);
 
-        // Supervisor details
+
         y += 20;
         doc.text("Supervisor details:", 20, y);
         y += 10;
@@ -792,11 +797,11 @@ export default function StudentLogbookPage() {
 
         if (field.endsWith("Hours")) {
             ent.totalHours =
-                (ent.mondayHours || 8) +
-                (ent.tuesdayHours || 8) +
-                (ent.wednesdayHours || 8) +
-                (ent.thursdayHours || 8) +
-                (ent.fridayHours || 8);
+                (Number(ent.mondayHours) || 8) +
+                (Number(ent.tuesdayHours) || 8) +
+                (Number(ent.wednesdayHours) || 8) +
+                (Number(ent.thursdayHours) || 8) +
+                (Number(ent.fridayHours) || 8);
         }
 
         if (idx >= 0) nextLogs[idx] = ent;
@@ -1068,12 +1073,9 @@ export default function StudentLogbookPage() {
                                     <CardContent className="p-8">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <LogbookInput label="IAP Company Supervisor Name" value={student?.supervisorName} onChange={(v) => setStudent({ ...student, supervisorName: v })} />
-                                            <LogbookInput label="Supervisor Designation/Title" value={student?.supervisorDesignation} onChange={(v) => setStudent({ ...student, supervisorDesignation: v })} />
                                             <LogbookInput label="Supervisor Department" value={student?.supervisorDepartment} onChange={(v) => setStudent({ ...student, supervisorDepartment: v })} />
                                             <LogbookInput label="Supervisor Tel No." value={student?.supervisorPhone} onChange={(v) => setStudent({ ...student, supervisorPhone: v })} />
                                             <LogbookInput label="Supervisor Email" value={student?.supervisorEmail} onChange={(v) => setStudent({ ...student, supervisorEmail: v })} />
-                                            <LogbookInput label="RCA Liaison Officer Name" value={student?.liaisonOfficerName} onChange={(v) => setStudent({ ...student, liaisonOfficerName: v })} />
-                                            <LogbookInput label="Liaison Officer Tel No." value={student?.liaisonOfficerPhone} onChange={(v) => setStudent({ ...student, liaisonOfficerPhone: v })} />
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -1603,233 +1605,227 @@ export default function StudentLogbookPage() {
                         )}
 
                         {currentStep === 5 && (
-                            <Card className="rounded-2xl border border-slate-200 shadow-sm bg-white overflow-hidden">
-                                <CardHeader className="bg-primary/5 p-8 border-b border-primary/10">
-                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                                        <div className="flex flex-col gap-2">
-                                            <CardTitle className="text-2xl font-black text-slate-900 border-b-2 border-primary pb-2 w-fit">Industrial Attachment Assessment (for Companies)</CardTitle>
-                                            <p className="text-slate-500 text-sm font-medium italic">Secure supervisor evaluation and final marking scheme.</p>
+                            <Card className="rounded-2xl border-2 border-primary shadow-xl bg-white overflow-hidden scroll-mt-20" id="assessment-vault">
+                                <CardHeader className="bg-primary p-10 border-b border-primary/20 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                                        <ShieldCheck className="h-32 w-32 text-white" />
+                                    </div>
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 relative z-10">
+                                        <div className="flex flex-col gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                                    <LockKeyhole className="h-6 w-6 text-white" />
+                                                </div>
+                                                <span className="text-primary-foreground/80 font-black uppercase tracking-[0.2em] text-[10px]">Secure Documentation Vault</span>
+                                            </div>
+                                            <CardTitle className="text-3xl md:text-4xl font-black text-white leading-tight">Industrial Attachment Assessment <br /><span className="text-primary-foreground/60">(Employer Copy)</span></CardTitle>
+                                            <p className="text-primary-foreground/70 text-sm font-medium italic">Standardized evaluation and final marking scheme from your host company.</p>
                                         </div>
-                                        <div className="h-20 w-32 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center shadow-md">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Final Grade</span>
-                                            <span className="text-3xl font-black text-primary">
+                                        <div className="h-24 w-40 rounded-2xl bg-white flex flex-col items-center justify-center shadow-2xl border-4 border-primary/20">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Final Weighted Grade</span>
+                                            <span className="text-4xl font-black text-primary">
                                                 {student?.ratings?.[0]?.rating !== undefined ? `${student.ratings[0].rating}` : "—"}
                                             </span>
                                             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">/ 100</span>
                                         </div>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="p-8 space-y-12">
-                                    {/* Student Report Documentation Summary */}
-                                    <div className="border-2 border-slate-900 rounded-sm overflow-hidden bg-white">
-                                        <div className="bg-slate-900 text-white p-3 text-[10px] font-black uppercase tracking-widest text-center">Student Report Documentation Summary</div>
-                                        <div className="p-6 space-y-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                                                <div className="space-y-1">
-                                                    <span className="text-[10px] uppercase font-bold text-slate-400">Student Name</span>
-                                                    <p className="font-bold text-slate-900">{student?.fullName || "—"}</p>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <span className="text-[10px] uppercase font-bold text-slate-400">Registration Number</span>
-                                                    <p className="font-bold text-slate-900">{student?.studentNumber || "—"}</p>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <span className="text-[10px] uppercase font-bold text-slate-400">Phone Number</span>
-                                                    <p className="font-bold text-slate-900">{student?.phone || "—"}</p>
-                                                </div>
-                                                <div className="space-y-1 md:col-span-2">
-                                                    <span className="text-[10px] uppercase font-bold text-slate-400">IAP Company Attached To</span>
-                                                    <p className="font-bold text-slate-900">{student?.companyName || "—"}</p>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <span className="text-[10px] uppercase font-bold text-slate-400">LO Visited Count</span>
-                                                    <p className="font-bold text-slate-900">{report.loVisitCount || 0} times</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-100 pt-6">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${report.isUseful ? 'bg-primary border-primary' : 'border-slate-300'}`}>
-                                                        {report.isUseful && <Check className="h-3 w-3 text-white" />}
-                                                    </div>
-                                                    <span className="text-xs font-semibold text-slate-600">Programme Useful/Relevant</span>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${report.improvedUnderstanding ? 'bg-primary border-primary' : 'border-slate-300'}`}>
-                                                        {report.improvedUnderstanding && <Check className="h-3 w-3 text-white" />}
-                                                    </div>
-                                                    <span className="text-xs font-semibold text-slate-600">Improved Understanding</span>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${report.providedExperiences ? 'bg-primary border-primary' : 'border-slate-300'}`}>
-                                                        {report.providedExperiences && <Check className="h-3 w-3 text-white" />}
-                                                    </div>
-                                                    <span className="text-xs font-semibold text-slate-600">Provided Experiences</span>
-                                                </div>
-                                            </div>
-
-                                            <div className="border-t border-slate-100 pt-6">
-                                                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-3">Programme Types Participated In:</span>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {report.programmeTypes?.map((type, i) => (
-                                                        <span key={i} className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-full border border-slate-200">
-                                                            {type}
-                                                        </span>
-                                                    )) || <span className="text-xs italic text-slate-400">None declared</span>}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {student?.ratings?.[0] ? (
-                                        <div className="space-y-10">
-                                            {/* Marking Scheme Table */}
-                                            <div className="border-2 border-slate-900 overflow-hidden text-[11px]">
-                                                {/* Header */}
-                                                <div className="grid grid-cols-[80px_1fr_60px_60px_60px_60px_60px_80px] font-black uppercase text-center bg-slate-50 border-b-2 border-slate-900">
-                                                    <div className="p-3 border-r border-slate-900 flex items-center justify-center">Evaluation Area</div>
-                                                    <div className="p-3 border-r border-slate-900 flex items-center justify-center">Evaluation Item</div>
-                                                    <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>Very High</span><span className="text-[9px] text-primary">10</span></div>
-                                                    <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>High</span><span className="text-[9px] text-primary">9</span></div>
-                                                    <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>Average</span><span className="text-[9px] text-primary">8</span></div>
-                                                    <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>Low</span><span className="text-[9px] text-primary">7</span></div>
-                                                    <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>Very Low</span><span className="text-[9px] text-primary">6</span></div>
-                                                    <div className="p-3 flex items-center justify-center">Score</div>
-                                                </div>
-
-                                                {/* Assignments Area */}
-                                                <div className="grid grid-cols-[80px_1fr]">
-                                                    <div className="border-r border-slate-900 bg-slate-50 flex items-center justify-center font-black [writing-mode:vertical-lr] rotate-180 py-8">Assignments</div>
-                                                    <div className="divide-y border-slate-900">
-                                                        {[
-                                                            { id: 1, label: 'Related knowledge', key: 'knowledgeWirelessOps' },
-                                                            { id: 2, label: 'Support for operation of wireless communication network', key: 'knowledgeWirelessEst' },
-                                                            { id: 3, label: 'Establishment of wireless communication network', key: 'knowledgeWirelessMaint' },
-                                                            { id: 4, label: 'Maintenance of wireless communication room', key: 'knowledgeApplication' }
-                                                        ].map((item, idx) => (
-                                                            <div key={item.id} className="grid grid-cols-[1fr_60px_60px_60px_60px_60px_80px] hover:bg-slate-50 transition-colors">
-
-                                                                <div className="p-3 border-r border-slate-900 flex gap-3">
-                                                                    <span className="font-black text-slate-400">{item.id}</span>
-                                                                    <span className="font-semibold text-slate-700">{item.label}</span>
-                                                                </div>
-                                                                {[10, 9, 8, 7, 6].map(score => (
-                                                                    <div key={score} className="p-3 border-r border-slate-900 flex items-center justify-center">
-                                                                        {(student.ratings[0] as any)[item.key] === score && <div className="h-4 w-4 rounded-full bg-slate-900 shadow-sm" />}
-                                                                    </div>
-                                                                ))}
-                                                                <div className="p-3 flex items-center justify-center font-black text-primary bg-primary/5">
-                                                                    {student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]] || "—"}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Attitude Area */}
-                                                <div className="grid grid-cols-[80px_1fr] border-t border-slate-900">
-                                                    <div className="border-r border-slate-900 bg-slate-50 flex items-center justify-center font-black [writing-mode:vertical-lr] rotate-180 py-8">Attitude</div>
-                                                    <div className="divide-y border-slate-900">
-                                                        {[
-                                                            { id: 1, label: 'Responsibility', key: 'responsibility' },
-                                                            { id: 2, label: 'Cooperativeness', key: 'cooperativeness' },
-                                                            { id: 3, label: 'Compliance with company rules and etiquette', key: 'complianceEtiquette' }
-                                                        ].map((item, idx) => (
-                                                            <div key={item.id} className="grid grid-cols-[1fr_60px_60px_60px_60px_60px_80px] hover:bg-slate-50 transition-colors">
-                                                                <div className="p-3 border-r border-slate-900 flex gap-3">
-                                                                    <span className="font-black text-slate-400">{item.id}</span>
-                                                                    <span className="font-semibold text-slate-700">{item.label}</span>
-                                                                </div>
-                                                                {[10, 9, 8, 7, 6].map(score => (
-                                                                    <div key={score} className="p-3 border-r border-slate-900 flex items-center justify-center">
-                                                                        {(student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]]) === score && <div className="h-4 w-4 rounded-full bg-slate-900 shadow-sm" />}
-                                                                    </div>
-                                                                ))}
-                                                                <div className="p-3 flex items-center justify-center font-black text-primary bg-primary/5">
-                                                                    {student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]] || "—"}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Safety Area */}
-                                                <div className="grid grid-cols-[80px_1fr] border-t border-slate-900">
-                                                    <div className="border-r border-slate-900 bg-slate-50 flex items-center justify-center font-black [writing-mode:vertical-lr] rotate-180 py-8">Safety</div>
-                                                    <div className="divide-y border-slate-900">
-                                                        {[
-                                                            { id: 1, label: 'Awareness of safety management', key: 'safetyAwareness' },
-                                                            { id: 2, label: 'Compliance with safety rules', key: 'safetyCompliance' },
-                                                            { id: 3, label: 'Arrangement of safety instruments', key: 'safetyArrangement' }
-                                                        ].map((item, idx) => (
-                                                            <div key={item.id} className="grid grid-cols-[1fr_60px_60px_60px_60px_60px_80px] hover:bg-slate-50 transition-colors">
-                                                                <div className="p-3 border-r border-slate-900 flex gap-3">
-                                                                    <span className="font-black text-slate-400">{item.id}</span>
-                                                                    <span className="font-semibold text-slate-700">{item.label}</span>
-                                                                </div>
-                                                                {[10, 9, 8, 7, 6].map(score => (
-                                                                    <div key={score} className="p-3 border-r border-slate-900 flex items-center justify-center">
-                                                                        {(student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]]) === score && <div className="h-4 w-4 rounded-full bg-slate-900 shadow-sm" />}
-                                                                    </div>
-                                                                ))}
-                                                                <div className="p-3 flex items-center justify-center font-black text-primary bg-primary/5">
-                                                                    {student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]] || "—"}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Attendance Footer */}
-                                                <div className="grid grid-cols-[1fr_80px_100px] border-t-2 border-slate-900 bg-slate-50 min-h-[60px]">
-                                                    <div className="p-4 border-r border-slate-900 flex flex-col justify-center">
-                                                        <span className="font-bold text-slate-800">Days of Absence: <span className="font-black text-primary">{student?.absentDays || 0}</span></span>
-                                                        <span className="text-[9px] text-slate-400 italic">(-10 points per unauthorised absence, capped at 100)</span>
-                                                    </div>
-                                                    <div className="p-4 border-r border-slate-900 flex items-center justify-center font-black text-slate-400 uppercase text-[9px] tracking-tighter">Attendance Score /100</div>
-                                                    <div className="p-4 flex items-center justify-center font-black text-lg text-primary">
-                                                        {Math.max(0, 100 - (student?.absentDays || 0) * 10)}
-                                                    </div>
-                                                </div>
-
-                                                {/* Final Marking Criteria */}
-                                                <div className="grid grid-cols-[1fr_200px] border-t-2 border-slate-900 bg-slate-900 text-white">
-                                                    <div className="p-6 font-black italic uppercase tracking-widest text-[10px] flex items-center">
-                                                        (Technical Assignments + Attitude + Safety) Score × 80% + Attendance × 20%
-                                                    </div>
-                                                    <div className="p-6 border-l border-white/20 flex flex-col items-center justify-center gap-1">
-                                                        <span className="text-[9px] font-bold text-white/50 uppercase">Final Weighted Total</span>
-                                                        <span className="text-3xl font-black">{student?.ratings?.[0]?.rating || "—"} <span className="text-sm text-white/40">/ 100</span></span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Supervisor Comment Block */}
-                                            {student?.ratings?.[0]?.comment && (
-                                                <div className="p-8 rounded-2xl border-2 border-slate-900 bg-white relative">
-                                                    <div className="absolute -top-3 left-8 bg-slate-900 text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Supervisor Performance Review</div>
-                                                    <p className="text-sm text-slate-700 italic leading-relaxed">&quot;{student?.ratings?.[0]?.comment}&quot;</p>
-                                                    <div className="mt-6 flex justify-between items-end border-t border-slate-100 pt-4">
-                                                        <div className="space-y-1">
-                                                            <div className="h-px w-32 bg-slate-400"></div>
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase">Supervisor Signature</p>
-                                                        </div>
-                                                        <Button onClick={generatePDF} variant="outline" className="border-2 border-slate-900 h-10 px-6 gap-2 font-black uppercase text-xs hover:bg-slate-900 hover:text-white transition-all">
-                                                            <Download className="h-4 w-4" /> Export Document
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
+                                <CardContent className="p-8 space-y-12 min-h-[400px]">
+                                    {!student?.ratings?.[0] ? (
                                         <div className="py-24 text-center space-y-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50">
                                             <div className="h-16 w-16 bg-white rounded-full border border-slate-200 flex items-center justify-center mx-auto shadow-sm">
                                                 <LockKeyhole className="h-8 w-8 text-slate-300" />
                                             </div>
                                             <div className="max-w-xs mx-auto space-y-2">
-                                                <h3 className="text-xl font-black text-slate-700 tracking-tight">Report Sealed</h3>
-                                                <p className="text-sm text-slate-500 leading-relaxed">The supervisor assessment vault is currently under encryption. Ratings will appear here once the formal industrial review is submitted.</p>
+                                                <h3 className="text-xl font-black text-slate-700 tracking-tight">Assessment Sealed</h3>
+                                                <p className="text-sm text-slate-500 leading-relaxed">The industrial evaluation vault is currently locked. Records will appear here once the supervisor submits your formal rating.</p>
                                             </div>
                                         </div>
+                                    ) : (
+                                        <>
+                                            {/* Student Report Documentation Summary */}
+                                            <div className="border-2 border-slate-900 rounded-sm overflow-hidden bg-white">
+                                                <div className="bg-slate-900 text-white p-3 text-[10px] font-black uppercase tracking-widest text-center">Student Report Documentation Summary</div>
+                                                <div className="p-6 space-y-6">
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                                                        <div className="space-y-1">
+                                                            <span className="text-[10px] uppercase font-bold text-slate-400">Student Name</span>
+                                                            <p className="font-bold text-slate-900">{student?.fullName || "—"}</p>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <span className="text-[10px] uppercase font-bold text-slate-400">Registration Number</span>
+                                                            <p className="font-bold text-slate-900">{student?.studentNumber || "—"}</p>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <span className="text-[10px] uppercase font-bold text-slate-400">Phone Number</span>
+                                                            <p className="font-bold text-slate-900">{student?.phone || "—"}</p>
+                                                        </div>
+                                                        <div className="space-y-1 md:col-span-2">
+                                                            <span className="text-[10px] uppercase font-bold text-slate-400">IAP Company Attached To</span>
+                                                            <p className="font-bold text-slate-900">{student?.companyName || "—"}</p>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <span className="text-[10px] uppercase font-bold text-slate-400">LO Visited Count</span>
+                                                            <p className="font-bold text-slate-900">{report.loVisitCount || 0} times</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-100 pt-6">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${report.isUseful ? 'bg-primary border-primary' : 'border-slate-300'}`}>
+                                                                {report.isUseful && <Check className="h-3 w-3 text-white" />}
+                                                            </div>
+                                                            <span className="text-xs font-semibold text-slate-600">Programme Useful/Relevant</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${report.improvedUnderstanding ? 'bg-primary border-primary' : 'border-slate-300'}`}>
+                                                                {report.improvedUnderstanding && <Check className="h-3 w-3 text-white" />}
+                                                            </div>
+                                                            <span className="text-xs font-semibold text-slate-600">Improved Understanding</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${report.providedExperiences ? 'bg-primary border-primary' : 'border-slate-300'}`}>
+                                                                {report.providedExperiences && <Check className="h-3 w-3 text-white" />}
+                                                            </div>
+                                                            <span className="text-xs font-semibold text-slate-600">Provided Experiences</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="border-t border-slate-100 pt-6">
+                                                        <span className="text-[10px] uppercase font-bold text-slate-400 block mb-3">Programme Types Participated In:</span>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {report.programmeTypes?.map((type, i) => (
+                                                                <span key={i} className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-full border border-slate-200">
+                                                                    {type}
+                                                                </span>
+                                                            )) || <span className="text-xs italic text-slate-400">None declared</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {student?.ratings?.[0] ? (
+                                                <div className="space-y-10">
+                                                    <div className="border-2 border-slate-900 overflow-hidden text-[11px]">
+                                                        <div className="grid grid-cols-[80px_1fr_60px_60px_60px_60px_60px_80px] font-black uppercase text-center bg-slate-50 border-b-2 border-slate-900">
+                                                            <div className="p-3 border-r border-slate-900 flex items-center justify-center">Evaluation Area</div>
+                                                            <div className="p-3 border-r border-slate-900 flex items-center justify-center">Evaluation Item</div>
+                                                            <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>Very High</span><span className="text-[9px] text-primary">10</span></div>
+                                                            <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>High</span><span className="text-[9px] text-primary">9</span></div>
+                                                            <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>Average</span><span className="text-[9px] text-primary">8</span></div>
+                                                            <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>Low</span><span className="text-[9px] text-primary">7</span></div>
+                                                            <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>Very Low</span><span className="text-[9px] text-primary">6</span></div>
+                                                            <div className="p-3 flex items-center justify-center">Score</div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-[80px_1fr]">
+                                                            <div className="border-r border-slate-900 bg-slate-50 flex items-center justify-center font-black [writing-mode:vertical-lr] rotate-180 py-8">Assignments</div>
+                                                            <div className="divide-y border-slate-900">
+                                                                {[
+                                                                    { id: 1, label: 'Knowledge of wireless communication operations', key: 'knowledgeWirelessOps' },
+                                                                    { id: 2, label: 'Knowledge of wireless installation & establishment', key: 'knowledgeWirelessEst' },
+                                                                    { id: 3, label: 'Knowledge of wireless maintenance & troubleshooting', key: 'knowledgeWirelessMaint' },
+                                                                    { id: 4, label: 'Knowledge of application of tool & testing equipment', key: 'knowledgeApplication' }
+                                                                ].map((item, idx) => (
+                                                                    <div key={item.id} className="grid grid-cols-[1fr_60px_60px_60px_60px_60px_80px] hover:bg-slate-50 transition-colors">
+
+                                                                        <div className="p-3 border-r border-slate-900 flex gap-3">
+                                                                            <span className="font-black text-slate-400">{item.id}</span>
+                                                                            <span className="font-semibold text-slate-700">{item.label}</span>
+                                                                        </div>
+                                                                        {[10, 9, 8, 7, 6].map(score => (
+                                                                            <div key={score} className="p-3 border-r border-slate-900 flex items-center justify-center">
+                                                                                {(student.ratings[0] as any)[item.key] === score && <div className="h-4 w-4 rounded-full bg-slate-900 shadow-sm" />}
+                                                                            </div>
+                                                                        ))}
+                                                                        <div className="p-3 flex items-center justify-center font-black text-primary bg-primary/5">
+                                                                            {student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]] || "—"}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-[80px_1fr] border-t border-slate-900">
+                                                            <div className="border-r border-slate-900 bg-slate-50 flex items-center justify-center font-black [writing-mode:vertical-lr] rotate-180 py-8">Attitude</div>
+                                                            <div className="divide-y border-slate-900">
+                                                                {[
+                                                                    { id: 1, label: 'Responsibility', key: 'responsibility' },
+                                                                    { id: 2, label: 'Cooperativeness', key: 'cooperativeness' },
+                                                                    { id: 3, label: 'Compliance with industrial etiquette', key: 'complianceEtiquette' }
+                                                                ].map((item, idx) => (
+                                                                    <div key={item.id} className="grid grid-cols-[1fr_60px_60px_60px_60px_60px_80px] hover:bg-slate-50 transition-colors">
+                                                                        <div className="p-3 border-r border-slate-900 flex gap-3">
+                                                                            <span className="font-black text-slate-400">{item.id}</span>
+                                                                            <span className="font-semibold text-slate-700">{item.label}</span>
+                                                                        </div>
+                                                                        {[10, 9, 8, 7, 6].map(score => (
+                                                                            <div key={score} className="p-3 border-r border-slate-900 flex items-center justify-center">
+                                                                                {(student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]]) === score && <div className="h-4 w-4 rounded-full bg-slate-900 shadow-sm" />}
+                                                                            </div>
+                                                                        ))}
+                                                                        <div className="p-3 flex items-center justify-center font-black text-primary bg-primary/5">
+                                                                            {student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]] || "—"}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-[80px_1fr] border-t border-slate-900">
+                                                            <div className="border-r border-slate-900 bg-slate-50 flex items-center justify-center font-black [writing-mode:vertical-lr] rotate-180 py-8 text-center uppercase tracking-tight">Safety Management</div>
+                                                            <div className="divide-y border-slate-900">
+                                                                {[
+                                                                    { id: 1, label: 'Awareness of safety management', key: 'safetyAwareness' },
+                                                                    { id: 2, label: 'Compliance with safety rules', key: 'safetyCompliance' },
+                                                                    { id: 3, label: 'Arrangement of safety instruments', key: 'safetyArrangement' }
+                                                                ].map((item, idx) => (
+                                                                    <div key={item.id} className="grid grid-cols-[1fr_60px_60px_60px_60px_60px_80px] hover:bg-slate-50 transition-colors">
+                                                                        <div className="p-3 border-r border-slate-900 flex gap-3">
+                                                                            <span className="font-black text-slate-400">{item.id}</span>
+                                                                            <span className="font-semibold text-slate-700">{item.label}</span>
+                                                                        </div>
+                                                                        {[10, 9, 8, 7, 6].map(score => (
+                                                                            <div key={score} className="p-3 border-r border-slate-900 flex items-center justify-center">
+                                                                                {(student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]]) === score && <div className="h-4 w-4 rounded-full bg-slate-900 shadow-sm" />}
+                                                                            </div>
+                                                                        ))}
+                                                                        <div className="p-3 flex items-center justify-center font-black text-primary bg-primary/5">
+                                                                            {student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]] || "—"}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-[1fr_80px_100px] border-t-2 border-slate-900 bg-slate-50 min-h-[60px]">
+                                                            <div className="p-4 border-r border-slate-900 flex flex-col justify-center">
+                                                                <span className="font-bold text-slate-800">Days of Absence: <span className="font-black text-primary">{student?.absentDays || 0}</span></span>
+                                                                <span className="text-[9px] text-slate-400 italic">(-10 points per unauthorised absence, capped at 100)</span>
+                                                            </div>
+                                                            <div className="p-4 border-r border-slate-900 flex items-center justify-center font-black text-slate-400 uppercase text-[9px] tracking-tighter">Attendance Score /100</div>
+                                                            <div className="p-4 flex items-center justify-center font-black text-lg text-primary">
+                                                                {Math.max(0, 100 - (student?.absentDays || 0) * 10)}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-[1fr_200px] border-t-2 border-slate-900 bg-slate-900 text-white">
+                                                            <div className="p-6 font-black italic uppercase tracking-widest text-[10px] flex items-center">
+                                                                (Technical Assignments + Attitude + Safety) Score × 80% + Attendance × 20%
+                                                            </div>
+                                                            <div className="p-6 border-l border-white/20 flex flex-col items-center justify-center gap-1">
+                                                                <span className="text-[9px] font-bold text-white/50 uppercase">Final Weighted Total</span>
+                                                                <span className="text-3xl font-black">{student?.ratings?.[0]?.rating || "—"} <span className="text-sm text-white/40">/ 100</span></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+                                            ):(
+                                                <div className="p-6 text-center text-slate-500">
+                                                    No ratings available.
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </CardContent>
                             </Card>
