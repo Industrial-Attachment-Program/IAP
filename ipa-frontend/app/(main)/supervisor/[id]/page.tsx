@@ -563,7 +563,7 @@ export default function SupervisorDashboard() {
 
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-[calc(100vh-112px)] flex flex-col overflow-hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-neutral/10 pb-6 shrink-0 mb-8">
         <div className="flex gap-8 overflow-x-auto pb-2 md:pb-0">
           {[
@@ -690,7 +690,7 @@ export default function SupervisorDashboard() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex-1 overflow-y-auto space-y-6 pr-2 hide-scrollbar pb-10"
+            className="flex-1 overflow-y-auto space-y-6 pr-2  pb-10"
           >
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 p-8 rounded-4xl text-white shadow-2xl relative overflow-hidden">
@@ -799,7 +799,7 @@ export default function SupervisorDashboard() {
                       <p className="text-slate-200 text-xs mt-1">Use the button above to issue the first assignment</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-3 pb-6">
                       {studentTasks.map(task => {
                         const statusColors: Record<string, string> = {
                           PENDING: "bg-slate-100 text-slate-600",
@@ -862,7 +862,9 @@ export default function SupervisorDashboard() {
                               <div className="border-t-2 border-slate-100 p-5 bg-slate-50 space-y-4">
                                 <div>
                                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Task Description</p>
-                                  <p className="text-sm text-slate-700 leading-relaxed">{task.description || "No description provided."}</p>
+                                  <div className="max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap wrap-break-words">{task.description || "No description provided."}</p>
+                                  </div>
                                 </div>
                                 <div className="pt-3 border-t border-slate-200 flex gap-3">
                                   <Button

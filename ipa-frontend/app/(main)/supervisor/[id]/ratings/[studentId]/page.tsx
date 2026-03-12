@@ -189,7 +189,7 @@ export default function StudentRatingPage() {
                         <div className="w-full space-y-4 pt-4 px-4">
                             <div className="flex gap-2 items-end">
                                 <span className="text-sm font-bold whitespace-nowrap">Student name:</span>
-                                <div className="flex-1 border-b border-black border-dotted h-5 text-sm uppercase px-2">{student?.user?.name || "................................................................................................................................................"}</div>
+                                <div className="flex-1 border-b border-black border-dotted h-5 text-sm uppercase px-2">{student?.user?.name || "................"}</div>
                             </div>
                             <div className="flex gap-2 items-end">
                                 <span className="text-sm font-bold whitespace-nowrap">Department/Class:</span>
@@ -487,7 +487,7 @@ export default function StudentRatingPage() {
                     <div className="p-10 space-y-8 bg-slate-50">
                         <div className="flex gap-4 items-end">
                             <span className="text-sm font-bold uppercase w-48">Company Name:</span>
-                            <div className="flex-1 h-6 font-semibold px-4 border-b-2 border-black border-dotted">{student?.companyName || "................................................................................................................................"}</div>
+                            <div className="flex-1 h-6 font-semibold px-4 border-b-2 border-black border-dotted">{student?.companyName || "......................."}</div>
                         </div>
                         <div className="flex gap-4 items-end">
                             <span className="text-sm font-bold uppercase w-48">Evaluator's Position:</span>
@@ -495,7 +495,7 @@ export default function StudentRatingPage() {
                                 className="flex-1 bg-transparent border-b-2 border-black border-dotted rounded-none shadow-none h-6 p-0 text-md font-semibold focus-visible:ring-0"
                                 value={rating.evaluatorPosition}
                                 onChange={(e) => setRating(prev => ({ ...prev, evaluatorPosition: e.target.value }))}
-                                placeholder="................................................................................................................................"
+                                placeholder=""
                             />
                         </div>
                         <div className="flex gap-4 items-end relative">
@@ -504,7 +504,7 @@ export default function StudentRatingPage() {
                                 className="flex-1 bg-transparent border-b-2 border-black border-dotted rounded-none shadow-none h-6 p-0 text-md font-semibold focus-visible:ring-0"
                                 value={rating.evaluatorName}
                                 onChange={(e) => setRating(prev => ({ ...prev, evaluatorName: e.target.value }))}
-                                placeholder="................................................................................................................................"
+                                placeholder=""
                             />
                             <span className="absolute right-0 bottom-1 text-[10px] font-bold italic opacity-40">(signature)</span>
                         </div>

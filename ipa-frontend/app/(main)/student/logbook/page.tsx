@@ -1865,15 +1865,15 @@ export default function StudentLogbookPage() {
                                                 </div>
                                                 <span className="text-primary-foreground/80 font-black uppercase tracking-[0.2em] text-[10px]">Secure Documentation Vault</span>
                                             </div>
-                                            <CardTitle className="text-3xl md:text-4xl font-black text-white leading-tight">Industrial Attachment Assessment <br /><span className="text-primary-foreground/60">(Employer Copy)</span></CardTitle>
+                                            <CardTitle className="text-3xl md:text-4xl font-black text-white leading-tight">Industrial Attachment Assessment</CardTitle>
                                             <p className="text-primary-foreground/70 text-sm font-medium italic">Standardized evaluation and final marking scheme from your host company.</p>
                                         </div>
                                         <div className="h-24 w-40 rounded-2xl bg-white flex flex-col items-center justify-center shadow-2xl border-4 border-primary/20">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Final Weighted Grade</span>
+                                            <span className="text-[13px] font-semibold text-slate-400">Final Weighted Grade</span>
                                             <span className="text-4xl font-black text-primary">
                                                 {student?.ratings?.[0]?.rating !== undefined ? `${student.ratings[0].rating}` : "—"}
                                             </span>
-                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">/ 100</span>
+                                            <span className="text-[16px] text-slate-400 font-semibold">/ 100</span>
                                         </div>
                                     </div>
                                 </CardHeader>
@@ -1890,183 +1890,400 @@ export default function StudentLogbookPage() {
                                         </div>
                                     ) : (
                                         <>
-                                            <div className="border-2 border-slate-900 rounded-sm overflow-hidden bg-white">
-                                                <div className="bg-slate-900 text-white p-3 text-[10px] font-black uppercase tracking-widest text-center">Student Report Documentation Summary</div>
-                                                <div className="p-6 space-y-6">
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-                                                        <div className="space-y-1">
-                                                            <span className="text-[10px] uppercase font-bold text-slate-400">Student Name</span>
-                                                            <p className="font-bold text-slate-900">{student?.fullName || "—"}</p>
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <span className="text-[10px] uppercase font-bold text-slate-400">Registration Number</span>
-                                                            <p className="font-bold text-slate-900">{student?.studentNumber || "—"}</p>
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <span className="text-[10px] uppercase font-bold text-slate-400">Phone Number</span>
-                                                            <p className="font-bold text-slate-900">{student?.phone || "—"}</p>
-                                                        </div>
-                                                        <div className="space-y-1 md:col-span-2">
-                                                            <span className="text-[10px] uppercase font-bold text-slate-400">IAP Company Attached To</span>
-                                                            <p className="font-bold text-slate-900">{student?.companyName || "—"}</p>
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <span className="text-[10px] uppercase font-bold text-slate-400">LO Visited Count</span>
-                                                            <p className="font-bold text-slate-900">{report.loVisitCount || 0} times</p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-100 pt-6">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${report.isUseful ? 'bg-primary border-primary' : 'border-slate-300'}`}>
-                                                                {report.isUseful && <Check className="h-3 w-3 text-white" />}
-                                                            </div>
-                                                            <span className="text-xs font-semibold text-slate-600">Programme Useful/Relevant</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${report.improvedUnderstanding ? 'bg-primary border-primary' : 'border-slate-300'}`}>
-                                                                {report.improvedUnderstanding && <Check className="h-3 w-3 text-white" />}
-                                                            </div>
-                                                            <span className="text-xs font-semibold text-slate-600">Improved Understanding</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`h-4 w-4 rounded border-2 flex items-center justify-center ${report.providedExperiences ? 'bg-primary border-primary' : 'border-slate-300'}`}>
-                                                                {report.providedExperiences && <Check className="h-3 w-3 text-white" />}
-                                                            </div>
-                                                            <span className="text-xs font-semibold text-slate-600">Provided Experiences</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="border-t border-slate-100 pt-6">
-                                                        <span className="text-[10px] uppercase font-bold text-slate-400 block mb-3">Programme Types Participated In:</span>
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {report.programmeTypes?.map((type, i) => (
-                                                                <span key={i} className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-full border border-slate-200">
-                                                                    {type}
-                                                                </span>
-                                                            )) || <span className="text-xs italic text-slate-400">None declared</span>}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
                                             {student?.ratings?.[0] ? (
                                                 <div className="space-y-10">
-                                                    <div className="border-2 border-slate-900 overflow-hidden text-[11px]">
-                                                        <div className="grid grid-cols-[80px_1fr_60px_60px_60px_60px_60px_80px] font-black uppercase text-center bg-slate-50 border-b-2 border-slate-900">
-                                                            <div className="p-3 border-r border-slate-900 flex items-center justify-center">Evaluation Area</div>
-                                                            <div className="p-3 border-r border-slate-900 flex items-center justify-center">Evaluation Item</div>
-                                                            <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>Very High</span><span className="text-[9px] text-primary">10</span></div>
-                                                            <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>High</span><span className="text-[9px] text-primary">9</span></div>
-                                                            <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>Average</span><span className="text-[9px] text-primary">8</span></div>
-                                                            <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>Low</span><span className="text-[9px] text-primary">7</span></div>
-                                                            <div className="p-3 border-r border-slate-900 flex flex-col justify-center items-center gap-1"><span>Very Low</span><span className="text-[9px] text-primary">6</span></div>
-                                                            <div className="p-3 flex items-center justify-center">Score</div>
+                                                    <div className="bg-white border-2 border-slate-900 p-0 overflow-hidden mt-6">
+                                                        {/* header */}
+                                                        <div className="border-b-2 border-slate-900 p-6 flex flex-col items-center justify-center space-y-4">
+                                                            <div className="w-full space-y-4 pt-4 px-4">
+                                                                <div className="flex gap-2 items-end">
+                                                                    <span className="text-sm font-bold whitespace-nowrap">Student name:</span>
+                                                                    <div className="flex-1 border-b border-black border-dotted h-5 text-sm uppercase px-2">{student?.fullName || "................................................................................................................................................"}</div>
+                                                                </div>
+                                                                <div className="flex gap-2 items-end">
+                                                                    <span className="text-sm font-bold whitespace-nowrap">Department/Class:</span>
+                                                                    <div className="flex-1 border-b border-black border-dotted h-5 text-sm uppercase px-2">{student?.studentProfile?.department || "................................................................................................................................................"}</div>
+                                                                </div>
+                                                            </div>
                                                         </div>
 
-                                                        <div className="grid grid-cols-[80px_1fr]">
-                                                            <div className="border-r border-slate-900 bg-slate-50 flex items-center justify-center font-black [writing-mode:vertical-lr] rotate-180 py-8">Assignments</div>
-                                                            <div className="divide-y border-slate-900">
-                                                                {[
-                                                                    { id: 1, label: 'Knowledge of wireless communication operations', key: 'knowledgeWirelessOps' },
-                                                                    { id: 2, label: 'Knowledge of wireless installation & establishment', key: 'knowledgeWirelessEst' },
-                                                                    { id: 3, label: 'Knowledge of wireless maintenance & troubleshooting', key: 'knowledgeWirelessMaint' },
-                                                                    { id: 4, label: 'Knowledge of application of tool & testing equipment', key: 'knowledgeApplication' }
-                                                                ].map((item, idx) => (
-                                                                    <div key={item.id} className="grid grid-cols-[1fr_60px_60px_60px_60px_60px_80px] hover:bg-slate-50 transition-colors">
+                                                        {/* marking scheme title */}
+                                                        <div className="bg-slate-50 border-b-2 border-slate-900 py-3 text-center">
+                                                            <span className="text-sm font-black uppercase tracking-widest">Marking Scheme</span>
+                                                        </div>
 
-                                                                        <div className="p-3 border-r border-slate-900 flex gap-3">
-                                                                            <span className="font-black text-slate-400">{item.id}</span>
-                                                                            <span className="font-semibold text-slate-700">{item.label}</span>
+                                                        {/* main table */}
+                                                        <div className="relative overflow-x-auto">
+                                                            <table className="w-full border-collapse text-xs">
+                                                                <thead>
+                                                                    <tr className="border-b-2 border-slate-900">
+                                                                        <th className="border-r border-slate-400 p-2 font-black uppercase [writing-mode:vertical-rl] rotate-180 py-4 h-32">Evaluation area</th>
+                                                                        <th className="border-r border-slate-400 p-1 font-black w-8"></th>
+                                                                        <th className="border-r border-slate-400 p-2 font-black uppercase text-center w-48">Evaluation item</th>
+                                                                        <th className="border-r border-slate-400 p-2 font-black uppercase text-center w-16">Very High</th>
+                                                                        <th className="border-r border-slate-400 p-2 font-black uppercase text-center w-16">High</th>
+                                                                        <th className="border-r border-slate-400 p-2 font-black uppercase text-center w-16">Average</th>
+                                                                        <th className="border-r border-slate-400 p-2 font-black uppercase text-center w-16">Low</th>
+                                                                        <th className="border-r border-slate-400 p-2 font-black uppercase text-center w-16">Very Low</th>
+                                                                        <th className="border-r border-slate-400 p-2 font-black uppercase text-center w-16">Score</th>
+                                                                        <th className="p-4 text-[10px] w-48 align-top leading-relaxed italic bg-slate-50 font-medium">
+                                                                            * Mark the score for each evaluation item and add up the total score and record it in the score column.
+                                                                        </th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {(() => {
+                                                                        const assignmentRowConfig = [
+                                                                            { id: 'knowledgeWirelessOps', key: 0 },
+                                                                            { id: 'knowledgeWirelessEst', key: 1 },
+                                                                            { id: 'knowledgeWirelessMaint', key: 2 },
+                                                                            { id: 'knowledgeApplication', key: 3 },
+                                                                        ];
+
+                                                                        const displayRows = tasks.length > 0
+                                                                            ? assignmentRowConfig.slice(0, Math.min(tasks.length, 4))
+                                                                            : [assignmentRowConfig[0]];
+
+                                                                        const assignmentsScore = displayRows.reduce((acc, row) => {
+                                                                            return acc + (student?.ratings?.[0]?.[row.id as keyof typeof student.ratings[0]] || 0);
+                                                                        }, 0);
+
+                                                                        return displayRows.map((item, i) => {
+                                                                            const task = tasks[item.key];
+                                                                            const label = task ? task.title : "Related Knowledge";
+                                                                            const savedScore = student?.ratings?.[0]?.[item.id as keyof typeof student.ratings[0]] as number;
+
+                                                                            return (
+                                                                                <tr key={item.id} className="border-b border-slate-300">
+                                                                                    {i === 0 && (
+                                                                                        <td rowSpan={displayRows.length} className="border-r-2 border-slate-900 p-2 font-black uppercase [writing-mode:vertical-rl] rotate-180 text-center w-12 tracking-widest bg-slate-50">
+                                                                                            Assignments
+                                                                                        </td>
+                                                                                    )}
+                                                                                    <td className="border-r border-slate-300 p-2 text-center font-bold">{i + 1}</td>
+                                                                                    <td className="border-r border-slate-300 p-3 leading-tight min-w-[200px]">
+                                                                                        {label}
+                                                                                    </td>
+                                                                                    {[10, 9, 8, 7, 6].map(val => (
+                                                                                        <td key={val} className="border-r border-slate-300 p-2 text-center">
+                                                                                            <div
+                                                                                                className={`h-8 w-8 mx-auto flex items-center justify-center rounded-lg border-2 ${savedScore === val ? "bg-slate-900 text-white border-slate-900 scale-110 shadow-md font-bold" : "border-transparent text-slate-300 font-bold"}`}
+                                                                                            >
+                                                                                                {val}
+                                                                                            </div>
+                                                                                        </td>
+                                                                                    ))}
+                                                                                    <td className="border-r-2 border-slate-900 p-2 text-center font-black bg-slate-50">
+                                                                                        {i === 0 ? `/40` : ""}
+                                                                                    </td>
+                                                                                    {i === 0 && (
+                                                                                        <td rowSpan={displayRows.length} className="p-4 align-middle bg-white">
+                                                                                            <div className="h-20 w-full border-4 border-slate-200 rounded-2xl flex flex-col items-center justify-center">
+                                                                                                <span className="text-[10px] font-black uppercase text-slate-400">sum</span>
+                                                                                                <span className="text-2xl font-black text-slate-900">{assignmentsScore}</span>
+                                                                                            </div>
+                                                                                        </td>
+                                                                                    )}
+                                                                                </tr>
+                                                                            );
+                                                                        });
+                                                                    })()}
+
+                                                                    {/* Attitude Area */}
+                                                                    {[
+                                                                        { id: 'responsibility', label: 'Responsibility', index: 1 },
+                                                                        { id: 'cooperativeness', label: 'Cooperativeness', index: 2 },
+                                                                        { id: 'complianceEtiquette', label: 'Compliance with company rules and workplace etiquette', index: 3 },
+                                                                    ].map((item, i, arr) => {
+                                                                        const attitudeScore = arr.reduce((acc, row) => acc + ((student?.ratings?.[0]?.[row.id as keyof typeof student.ratings[0]] as number) || 0), 0);
+                                                                        const savedScore = student?.ratings?.[0]?.[item.id as keyof typeof student.ratings[0]] as number;
+
+                                                                        return (
+                                                                            <tr key={item.id} className="border-b border-slate-300">
+                                                                                {i === 0 && (
+                                                                                    <td rowSpan={3} className="border-r-2 border-slate-900 p-2 font-black uppercase [writing-mode:vertical-rl] rotate-180 text-center w-12 tracking-widest bg-slate-50">
+                                                                                        Attitude
+                                                                                    </td>
+                                                                                )}
+                                                                                <td className="border-r border-slate-300 p-2 text-center font-bold">{item.index}</td>
+                                                                                <td className="border-r border-slate-300 p-3 leading-tight">{item.label}</td>
+                                                                                {[10, 9, 8, 7, 6].map(val => (
+                                                                                    <td key={val} className="border-r border-slate-300 p-2 text-center">
+                                                                                        <div
+                                                                                            className={`h-8 w-8 mx-auto flex items-center justify-center rounded-lg border-2 ${savedScore === val ? "bg-slate-900 text-white border-slate-900 scale-110 shadow-md font-bold" : "border-transparent text-slate-300 font-bold"}`}
+                                                                                        >
+                                                                                            {val}
+                                                                                        </div>
+                                                                                    </td>
+                                                                                ))}
+                                                                                <td className="border-r-2 border-slate-900 p-2 text-center font-black bg-slate-50">
+                                                                                    {i === 0 ? `/30` : ""}
+                                                                                </td>
+                                                                                {i === 0 && (
+                                                                                    <td rowSpan={3} className="p-4 align-middle bg-white">
+                                                                                        <div className="h-20 w-full border-4 border-slate-200 rounded-2xl flex flex-col items-center justify-center">
+                                                                                            <span className="text-[10px] font-black uppercase text-slate-400">sum</span>
+                                                                                            <span className="text-2xl font-black text-slate-900">{attitudeScore}</span>
+                                                                                        </div>
+                                                                                    </td>
+                                                                                )}
+                                                                            </tr>
+                                                                        );
+                                                                    })}
+
+                                                                    {/* Safety Area */}
+                                                                    {(() => {
+                                                                        const assignmentsScore = [
+                                                                            { id: 'knowledgeWirelessOps', key: 0 },
+                                                                            { id: 'knowledgeWirelessEst', key: 1 },
+                                                                            { id: 'knowledgeWirelessMaint', key: 2 },
+                                                                            { id: 'knowledgeApplication', key: 3 },
+                                                                        ].reduce((acc, row) => acc + ((student?.ratings?.[0]?.[row.id as keyof typeof student.ratings[0]] as number) || 0), 0);
+
+                                                                        const attitudeScore = [
+                                                                            { id: 'responsibility' },
+                                                                            { id: 'cooperativeness' },
+                                                                            { id: 'complianceEtiquette' }
+                                                                        ].reduce((acc, row) => acc + ((student?.ratings?.[0]?.[row.id as keyof typeof student.ratings[0]] as number) || 0), 0);
+
+                                                                        const safetyItems = [
+                                                                            { id: 'safetyAwareness', label: 'Awareness of safety management', index: 1 },
+                                                                            { id: 'safetyCompliance', label: 'Compliance with safety rules', index: 2 },
+                                                                            { id: 'safetyArrangement', label: 'Arrangement of safety instruments', index: 3 },
+                                                                        ];
+
+                                                                        const safetyScore = safetyItems.reduce((acc, row) => acc + ((student?.ratings?.[0]?.[row.id as keyof typeof student.ratings[0]] as number) || 0), 0);
+
+                                                                        return safetyItems.map((item, i) => {
+                                                                            const savedScore = student?.ratings?.[0]?.[item.id as keyof typeof student.ratings[0]] as number;
+
+                                                                            return (
+                                                                                <tr key={item.id} className="border-b border-slate-300">
+                                                                                    {i === 0 && (
+                                                                                        <td rowSpan={3} className="border-r-2 border-slate-900 p-2 font-black uppercase [writing-mode:vertical-rl] rotate-180 text-center w-12 tracking-widest bg-slate-50">
+                                                                                            Safety Management
+                                                                                        </td>
+                                                                                    )}
+                                                                                    <td className="border-r border-slate-300 p-2 text-center font-bold">{item.index}</td>
+                                                                                    <td className="border-r border-slate-300 p-3 leading-tight">{item.label}</td>
+                                                                                    {[10, 9, 8, 7, 6].map(val => (
+                                                                                        <td key={val} className="border-r border-slate-300 p-2 text-center">
+                                                                                            <div className={`h-8 w-8 mx-auto flex items-center justify-center rounded-lg border-2 ${savedScore === val ? "bg-slate-900 text-white border-slate-900 scale-110 shadow-md font-bold" : "border-transparent text-slate-300 font-bold"}`}>
+                                                                                                {val}
+                                                                                            </div>
+                                                                                        </td>
+                                                                                    ))}
+                                                                                    <td className="border-r-2 border-slate-900 p-2 text-center font-black bg-slate-50">
+                                                                                        {i === 0 ? `/30` : ""}
+                                                                                    </td>
+                                                                                    {i === 0 && (
+                                                                                        <td rowSpan={3} className="p-4 align-middle bg-slate-50 border-l-4 border-slate-900">
+                                                                                            <div className="text-center space-y-2">
+                                                                                                <span className="text-[10px] font-black uppercase block">Total Score</span>
+                                                                                                <div className="text-4xl font-black text-slate-900">{assignmentsScore + attitudeScore + safetyScore}/100</div>
+                                                                                            </div>
+                                                                                        </td>
+                                                                                    )}
+                                                                                </tr>
+                                                                            );
+                                                                        });
+                                                                    })()}
+
+                                                                    {/* Attendance Block */}
+                                                                    {(() => {
+                                                                        const absentDays = student?.absentDays || 0;
+                                                                        const attendanceRaw = Math.max(0, 100 - (absentDays * 10));
+
+                                                                        const assignmentsScore = [
+                                                                            { id: 'knowledgeWirelessOps', key: 0 },
+                                                                            { id: 'knowledgeWirelessEst', key: 1 },
+                                                                            { id: 'knowledgeWirelessMaint', key: 2 },
+                                                                            { id: 'knowledgeApplication', key: 3 },
+                                                                        ].reduce((acc, row) => acc + ((student?.ratings?.[0]?.[row.id as keyof typeof student.ratings[0]] as number) || 0), 0);
+
+                                                                        const attitudeScore = [
+                                                                            { id: 'responsibility' },
+                                                                            { id: 'cooperativeness' },
+                                                                            { id: 'complianceEtiquette' }
+                                                                        ].reduce((acc, row) => acc + ((student?.ratings?.[0]?.[row.id as keyof typeof student.ratings[0]] as number) || 0), 0);
+
+                                                                        const safetyScore = [
+                                                                            { id: 'safetyAwareness' },
+                                                                            { id: 'safetyCompliance' },
+                                                                            { id: 'safetyArrangement' }
+                                                                        ].reduce((acc, row) => acc + ((student?.ratings?.[0]?.[row.id as keyof typeof student.ratings[0]] as number) || 0), 0);
+
+                                                                        const rawScore = assignmentsScore + attitudeScore + safetyScore;
+                                                                        const weightedPerformance = rawScore * 0.8;
+                                                                        const attendanceWeighted = attendanceRaw * 0.2;
+                                                                        const finalTotal = Math.round((weightedPerformance + attendanceWeighted) * 10) / 10;
+
+                                                                        return (
+                                                                            <tr className="border-b-2 border-slate-900">
+                                                                                <td className="border-r-2 border-slate-900 p-2 font-black uppercase [writing-mode:vertical-rl] rotate-180 text-center w-12 tracking-widest bg-slate-900 text-white">
+                                                                                    Attendance
+                                                                                </td>
+                                                                                <td colSpan={7} className="p-8 space-y-4">
+                                                                                    <div className="flex items-center gap-4">
+                                                                                        <span className="text-sm font-black whitespace-nowrap uppercase">Days of Absence:</span>
+                                                                                        <div className="w-24 border-b-2 border-black border-dotted focus:outline-none text-center font-black text-lg h-10 flex items-end justify-center pb-1">
+                                                                                            {absentDays}
+                                                                                        </div>
+                                                                                        <span className="text-[11px] font-medium text-slate-400 italic leading-tight">
+                                                                                            * 10 points are deducted for each absence from work per day. However, points will not be deducted for sick leave with supporting documents attached.
+                                                                                            <br />
+                                                                                            * Unauthorised late arrival, early departure without notice, 3 times of unauthorised results are treated as 1 day of absence from work
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="border-r-2 border-slate-900 p-2 text-center font-black bg-slate-100">
+                                                                                    {attendanceRaw}/100
+                                                                                </td>
+                                                                                <td className="p-4 align-middle bg-slate-900 text-white">
+                                                                                    <div className="text-center space-y-1">
+                                                                                        <span className="text-[10px] font-black uppercase block opacity-60">Final weighted</span>
+                                                                                        <div className="text-5xl font-black tracking-tighter">{finalTotal}</div>
+                                                                                        <span className="text-[10px] font-bold opacity-60">/ 100</span>
+                                                                                    </div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        );
+                                                                    })()}
+
+                                                                    {/* Marking Formula Row */}
+                                                                    <tr className="bg-slate-50">
+                                                                        <td className="border-r-2 border-slate-900 p-3 font-black text-center text-[10px] uppercase">Marking</td>
+                                                                        <td colSpan={9} className="p-4 text-xs font-black text-center tracking-wide">
+                                                                            (Doing Training assignments + Attitude + Safety management) score × 80% + Attendance (20%)
+                                                                        </td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+
+                                                        {/* student attendance sheet footer */}
+                                                        <div className="bg-white border-none mt-8 overflow-hidden">
+                                                            <div className="p-3 bg-slate-50 border-y border-x-2 border-black">
+                                                                <span className="text-sm font-black uppercase tracking-widest pl-2">Student attendance sheet</span>
+                                                            </div>
+                                                            {(() => {
+                                                                const absentDays = student?.absentDays || 0;
+                                                                const attendanceRaw = Math.max(0, 100 - (absentDays * 10));
+
+                                                                const assignmentsScore = [
+                                                                    { id: 'knowledgeWirelessOps', key: 0 },
+                                                                    { id: 'knowledgeWirelessEst', key: 1 },
+                                                                    { id: 'knowledgeWirelessMaint', key: 2 },
+                                                                    { id: 'knowledgeApplication', key: 3 },
+                                                                ].reduce((acc, row) => acc + ((student?.ratings?.[0]?.[row.id as keyof typeof student.ratings[0]] as number) || 0), 0);
+
+                                                                const attitudeScore = [
+                                                                    { id: 'responsibility' },
+                                                                    { id: 'cooperativeness' },
+                                                                    { id: 'complianceEtiquette' }
+                                                                ].reduce((acc, row) => acc + ((student?.ratings?.[0]?.[row.id as keyof typeof student.ratings[0]] as number) || 0), 0);
+
+                                                                const safetyScore = [
+                                                                    { id: 'safetyAwareness' },
+                                                                    { id: 'safetyCompliance' },
+                                                                    { id: 'safetyArrangement' }
+                                                                ].reduce((acc, row) => acc + ((student?.ratings?.[0]?.[row.id as keyof typeof student.ratings[0]] as number) || 0), 0);
+
+                                                                const rawScore = assignmentsScore + attitudeScore + safetyScore;
+                                                                const weightedPerformance = rawScore * 0.8;
+                                                                const attendanceWeighted = attendanceRaw * 0.2;
+                                                                const finalTotal = Math.round((weightedPerformance + attendanceWeighted) * 10) / 10;
+
+                                                                return (
+                                                                    <div className="grid grid-cols-1 md:grid-cols-4 border-b-2 border-x-2 border-slate-900">
+                                                                        <div className="border-r border-slate-900 p-6 flex items-center justify-center bg-slate-50">
+                                                                            <span className="text-sm font-black uppercase">Scheme</span>
                                                                         </div>
-                                                                        {[10, 9, 8, 7, 6].map(score => (
-                                                                            <div key={score} className="p-3 border-r border-slate-900 flex items-center justify-center">
-                                                                                {(student.ratings[0] as any)[item.key] === score && <div className="h-4 w-4 rounded-full bg-slate-900 shadow-sm" />}
+                                                                        <div className="col-span-3 p-6 flex flex-col gap-4">
+                                                                            {/* Performance component */}
+                                                                            <div className="flex items-center gap-2 text-sm flex-wrap">
+                                                                                <span className="font-bold text-slate-500 italic">performance score</span>
+                                                                                <div className="border-b-2 border-black w-12 text-center font-black text-slate-900">{rawScore}</div>
+                                                                                <span className="font-bold text-slate-500">× 80% =</span>
+                                                                                <div className="border-b-2 border-black border-dotted w-14 text-center font-black text-slate-900">{Math.round(weightedPerformance * 10) / 10}</div>
                                                                             </div>
-                                                                        ))}
-                                                                        <div className="p-3 flex items-center justify-center font-black text-primary bg-primary/5">
-                                                                            {student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]] || "—"}
+                                                                            {/* Attendance component */}
+                                                                            <div className="flex items-center gap-2 text-sm flex-wrap">
+                                                                                <span className="font-bold text-slate-500 italic">attendance score</span>
+                                                                                <div className="border-b-2 border-black w-12 text-center font-black text-slate-900">{attendanceRaw}</div>
+                                                                                <span className="font-bold text-slate-500">× 20% =</span>
+                                                                                <div className="border-b-2 border-black border-dotted w-14 text-center font-black text-slate-900">{Math.round(attendanceWeighted * 10) / 10}</div>
+                                                                            </div>
+                                                                            {/* Final total */}
+                                                                            <div className="flex items-center gap-2 text-base border-t border-slate-200 pt-4 flex-wrap">
+                                                                                <span className="font-black">Total</span>
+                                                                                <div className="border-b-2 border-black w-14 text-center font-black text-slate-900 text-lg">{finalTotal}</div>
+                                                                                <span className="font-black text-slate-500">/ 100</span>
+                                                                            </div>
                                                                         </div>
                                                                     </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-[80px_1fr] border-t border-slate-900">
-                                                            <div className="border-r border-slate-900 bg-slate-50 flex items-center justify-center font-black [writing-mode:vertical-lr] rotate-180 py-8">Attitude</div>
-                                                            <div className="divide-y border-slate-900">
-                                                                {[
-                                                                    { id: 1, label: 'Responsibility', key: 'responsibility' },
-                                                                    { id: 2, label: 'Cooperativeness', key: 'cooperativeness' },
-                                                                    { id: 3, label: 'Compliance with industrial etiquette', key: 'complianceEtiquette' }
-                                                                ].map((item, idx) => (
-                                                                    <div key={item.id} className="grid grid-cols-[1fr_60px_60px_60px_60px_60px_80px] hover:bg-slate-50 transition-colors">
-                                                                        <div className="p-3 border-r border-slate-900 flex gap-3">
-                                                                            <span className="font-black text-slate-400">{item.id}</span>
-                                                                            <span className="font-semibold text-slate-700">{item.label}</span>
+                                                                );
+                                                            })()}
+                                                            <div className="p-8 border-b-2 border-x-2 border-slate-900 text-center">
+                                                                {(() => {
+                                                                    const fmt = (dateStr: string | null | undefined, part: 'dd' | 'mm' | 'yyyy') => {
+                                                                        if (!dateStr) return part === 'yyyy' ? '202X' : part === 'mm' ? 'mm.' : 'dd.';
+                                                                        const d = new Date(dateStr);
+                                                                        if (isNaN(d.getTime())) return part === 'yyyy' ? '202X' : part === 'mm' ? 'mm.' : 'dd.';
+                                                                        if (part === 'dd') return String(d.getDate()).padStart(2, '0') + '.';
+                                                                        if (part === 'mm') return String(d.getMonth() + 1).padStart(2, '0') + '.';
+                                                                        return String(d.getFullYear());
+                                                                    };
+                                                                    const start = student?.internshipStart;
+                                                                    const end = student?.internshipEnd;
+                                                                    return (
+                                                                        <div className="flex items-center justify-center gap-3 text-sm font-bold flex-wrap">
+                                                                            <span>Period</span>
+                                                                            <div className={`border-b border-black border-dotted w-12 text-center ${start ? 'text-slate-900' : 'text-slate-400'}`}>{fmt(start, 'dd')}</div>
+                                                                            <div className={`border-b border-black border-dotted w-12 text-center ${start ? 'text-slate-900' : 'text-slate-400'}`}>{fmt(start, 'mm')}</div>
+                                                                            <div className={`border-b border-black border-dotted w-16 text-center ${start ? 'text-slate-900' : 'text-slate-400'}`}>{fmt(start, 'yyyy')}</div>
+                                                                            <span>~</span>
+                                                                            <div className={`border-b border-black border-dotted w-12 text-center ${end ? 'text-slate-900' : 'text-slate-400'}`}>{fmt(end, 'dd')}</div>
+                                                                            <div className={`border-b border-black border-dotted w-12 text-center ${end ? 'text-slate-900' : 'text-slate-400'}`}>{fmt(end, 'mm')}</div>
+                                                                            <div className={`border-b border-black border-dotted w-16 text-center ${end ? 'text-slate-900' : 'text-slate-400'}`}>{fmt(end, 'yyyy')}</div>
                                                                         </div>
-                                                                        {[10, 9, 8, 7, 6].map(score => (
-                                                                            <div key={score} className="p-3 border-r border-slate-900 flex items-center justify-center">
-                                                                                {(student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]]) === score && <div className="h-4 w-4 rounded-full bg-slate-900 shadow-sm" />}
-                                                                            </div>
-                                                                        ))}
-                                                                        <div className="p-3 flex items-center justify-center font-black text-primary bg-primary/5">
-                                                                            {student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]] || "—"}
+                                                                    );
+                                                                })()}
+                                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-4 border-b-2 border-x-2 border-slate-900 min-h-[160px]">
+                                                                <div className="border-r border-slate-900 p-6 flex items-center justify-center bg-slate-50 text-center">
+                                                                    <span className="text-sm font-black uppercase">Overall<br />Review</span>
+                                                                </div>
+                                                                <div className="col-span-3 p-6 text-sm text-slate-700 whitespace-pre-wrap">
+                                                                    {student?.ratings?.[0]?.comment || "No review provided."}
+                                                                </div>
+                                                            </div>
+                                                            <div className="p-10 space-y-8 bg-slate-50 border-x-2 border-b-2 border-slate-900">
+                                                                <div className="flex gap-4 items-end">
+                                                                    <span className="text-sm font-bold uppercase w-48">Company Name:</span>
+                                                                    <div className="flex-1 h-6 font-semibold px-4 border-b-2 border-black border-dotted">{student?.companyName || "................................................................................................................................"}</div>
+                                                                </div>
+                                                                <div className="flex gap-4 items-end">
+                                                                    <span className="text-sm font-bold uppercase w-48">Evaluator's Position:</span>
+                                                                    <div className="flex-1 h-6 font-semibold px-4 border-b-2 border-black border-dotted">
+                                                                        {student?.supervisor?.role || "................................................................................................................................"}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex gap-4 items-end">
+                                                                    <span className="text-sm font-bold uppercase w-48">Evaluator's Name / Sign:</span>
+                                                                    <div className="flex-1 h-6 font-semibold px-4 border-b-2 border-black border-dotted relative">
+                                                                        <div className="absolute inset-0 flex items-center justify-between px-4">
+                                                                            <span>{student?.supervisor?.user?.name || ""}</span>
+                                                                            {student?.ratings?.[0] && <span className="font-[signature] text-2xl text-slate-800 -rotate-3">{student?.supervisor?.user?.name}</span>}
                                                                         </div>
                                                                     </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-[80px_1fr] border-t border-slate-900">
-                                                            <div className="border-r border-slate-900 bg-slate-50 flex items-center justify-center font-black [writing-mode:vertical-lr] rotate-180 py-8 text-center uppercase tracking-tight">Safety Management</div>
-                                                            <div className="divide-y border-slate-900">
-                                                                {[
-                                                                    { id: 1, label: 'Awareness of safety management', key: 'safetyAwareness' },
-                                                                    { id: 2, label: 'Compliance with safety rules', key: 'safetyCompliance' },
-                                                                    { id: 3, label: 'Arrangement of safety instruments', key: 'safetyArrangement' }
-                                                                ].map((item, idx) => (
-                                                                    <div key={item.id} className="grid grid-cols-[1fr_60px_60px_60px_60px_60px_80px] hover:bg-slate-50 transition-colors">
-                                                                        <div className="p-3 border-r border-slate-900 flex gap-3">
-                                                                            <span className="font-black text-slate-400">{item.id}</span>
-                                                                            <span className="font-semibold text-slate-700">{item.label}</span>
-                                                                        </div>
-                                                                        {[10, 9, 8, 7, 6].map(score => (
-                                                                            <div key={score} className="p-3 border-r border-slate-900 flex items-center justify-center">
-                                                                                {(student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]]) === score && <div className="h-4 w-4 rounded-full bg-slate-900 shadow-sm" />}
-                                                                            </div>
-                                                                        ))}
-                                                                        <div className="p-3 flex items-center justify-center font-black text-primary bg-primary/5">
-                                                                            {student?.ratings?.[0]?.[item.key as keyof typeof student.ratings[0]] || "—"}
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-[1fr_80px_100px] border-t-2 border-slate-900 bg-slate-50 min-h-[60px]">
-                                                            <div className="p-4 border-r border-slate-900 flex flex-col justify-center">
-                                                                <span className="font-bold text-slate-800">Days of Absence: <span className="font-black text-primary">{student?.absentDays || 0}</span></span>
-                                                                <span className="text-[9px] text-slate-400 italic">(-10 points per unauthorised absence, capped at 100)</span>
-                                                            </div>
-                                                            <div className="p-4 border-r border-slate-900 flex items-center justify-center font-black text-slate-400 uppercase text-[9px] tracking-tighter">Attendance Score /100</div>
-                                                            <div className="p-4 flex items-center justify-center font-black text-lg text-primary">
-                                                                {Math.max(0, 100 - (student?.absentDays || 0) * 10)}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-[1fr_200px] border-t-2 border-slate-900 bg-slate-900 text-white">
-                                                            <div className="p-6 font-black italic uppercase tracking-widest text-[10px] flex items-center">
-                                                                (Technical Assignments + Attitude + Safety) Score × 80% + Attendance × 20%
-                                                            </div>
-                                                            <div className="p-6 border-l border-white/20 flex flex-col items-center justify-center gap-1">
-                                                                <span className="text-[9px] font-bold text-white/50 uppercase">Final Weighted Total</span>
-                                                                <span className="text-3xl font-black">{student?.ratings?.[0]?.rating || "—"} <span className="text-sm text-white/40">/ 100</span></span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
 
                                                 </div>
-                                            ):(
+                                            ) : (
                                                 <div className="p-6 text-center text-slate-500">
                                                     No ratings available.
                                                 </div>
