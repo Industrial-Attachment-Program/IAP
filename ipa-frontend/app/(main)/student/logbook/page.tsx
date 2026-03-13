@@ -1061,26 +1061,7 @@ export default function StudentLogbookPage() {
         addFooter(currentPageNum);
         currentPageNum++;
 
-        // ─── SUBMISSION INSTRUCTIONS ───────────────────────────────────────────────
-        doc.addPage();
-        addHeader("SUBMISSION & COMPLETION", currentPageNum);
-        doc.setFontSize(16); doc.text("Submission Instructions", 105, 50, { align: "center" });
-        doc.setFontSize(11); doc.setFont(fontName, "normal");
-        const submission = [
-            "1. Ensure all weekly logs are signed and stamped by the company supervisor.",
-            "2. Complete the Result Report in full.",
-            "3. Obtain the final evaluation and company stamp.",
-            "4. Submit this logbook to your Liaison Officer (LO) at RCA within TWO weeks of completion."
-        ];
-        y = 70;
-        submission.forEach(line => {
-            doc.text(line, 25, y);
-            y += 10;
-        });
 
-        doc.text("Liaison Officer Signature: _______________________", 20, 165);
-        doc.text("Date: _______________________", 120, 165);
-        addFooter(currentPageNum);
 
         // FINAL SAVE
         doc.save(`Logbook_${student?.fullName?.replace(/\s+/g, '_') || 'Student'}.pdf`);
