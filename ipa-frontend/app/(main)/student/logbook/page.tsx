@@ -1039,7 +1039,12 @@ export default function StudentLogbookPage() {
                     const text = data.cell.raw.rotatedText;
                     doc.setFont(fontName, 'bold');
                     doc.setFontSize(7);
-                    doc.setTextColor(data.cell.styles.textColor || [20, 30, 45]);
+                    const color = data.cell.styles.textColor || [20, 30, 45];
+                    if (Array.isArray(color)) {
+                        doc.setTextColor(color[0], color[1], color[2]);
+                    } else {
+                        doc.setTextColor(color);
+                    }
                     const x = data.cell.x + data.cell.width / 2;
                     const y = data.cell.y + data.cell.height / 2;
                     doc.text(text, x, y, { align: 'center', baseline: 'middle', angle: 90 });
