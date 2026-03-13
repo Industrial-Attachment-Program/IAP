@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -471,7 +471,7 @@ export default function StudentLogbookPage() {
         // ─── PAGE 1: COVER ───────────────────────────────────────────────────────────
         doc.setLineWidth(1.5);
         doc.rect(10, 10, 190, 277);
-        
+
         doc.setFont(fontName, "bold");
         doc.setFontSize(24);
         doc.text("INDUSTRIAL ATTACHMENT", 105, 50, { align: "center" });
@@ -526,7 +526,7 @@ export default function StudentLogbookPage() {
         addHeader("KEY POINTS (COMPULSORY)", 3);
         y = 35;
         doc.setFont(fontName, "bold"); doc.text("Key points to keep in mind on a daily basis.", 20, y); y += 10;
-        
+
         doc.setFont(fontName, "italic"); doc.text("Before IAP", 20, y); y += 6;
         doc.setFont(fontName, "normal"); doc.text("1. Did you meet your IAP coordinator or any Liaison Officer (LO)?", 25, y); y += 10;
 
@@ -580,7 +580,7 @@ export default function StudentLogbookPage() {
             doc.text(lines, 25, y);
             y += lines.length * 5 + 3;
         });
-        
+
         doc.setFont(fontName, "bold"); doc.text("4. After the Placement", 20, y); y += 6;
         doc.setFont(fontName, "normal");
         const after = [
@@ -596,7 +596,7 @@ export default function StudentLogbookPage() {
             y += lines.length * 5 + 3;
         });
         addFooter(4);
-        
+
         doc.addPage();
         addHeader("IAP INSTRUCTIONS", 5);
         y = 30;
@@ -673,23 +673,21 @@ export default function StudentLogbookPage() {
         });
         addFooter(7);
 
-        // -- Page 8 (Sample - Optional for 1:1 parity) --
-        doc.addPage(); addHeader("SAMPLE LOG ENTRY", 8); addFooter(8);
-
-        // ─── PAGES 9-ONWARD: WEEKLY LOGS (DYNAMIC WEEKS) ───────────────────────────
-        const weeksToRender = weeklyLogs.length > 0 
+        // ─── PAGES 8-ONWARD: WEEKLY LOGS (DYNAMIC WEEKS) ───────────────────────────
+        const weeksToRender = weeklyLogs.length > 0
             ? [...weeklyLogs].sort((a, b) => a.weekNumber - b.weekNumber).map(l => l.weekNumber)
             : [1]; // Fallback to 1 week if no logs exist
-        
+
         for (let idx = 0; idx < weeksToRender.length; idx++) {
             const weekNum = weeksToRender[idx];
+            const displayPageNum = 8 + idx;
             const log = getSafeLog(weekNum);
             const weekRange = generatedWeeksList.find(w => w.number === weekNum);
             const dateStr = weekRange ? `${new Date(weekRange.start).toLocaleDateString()} - ${new Date(weekRange.end).toLocaleDateString()}` : `Week ${weekNum} Dates`;
 
             doc.addPage();
-            addHeader(`WEEKLY LOG - WEEK ${weekNum}`, 8 + weekNum);
-            
+            addHeader(`WEEKLY LOG - WEEK ${weekNum}`, displayPageNum);
+
             doc.setFont(fontName, "bold"); doc.setFontSize(11);
             doc.text(`WEEK ${weekNum}`, 20, 25);
             doc.setFont(fontName, "normal"); doc.setFontSize(9);
@@ -716,17 +714,17 @@ export default function StudentLogbookPage() {
             doc.setFont(fontName, "bold"); doc.text("Student's General Statement on Attachment:", 20, y); y += 6;
             doc.setFont(fontName, "normal");
             const stmtLines = doc.splitTextToSize(log.generalStatement || "No statement provided.", 170);
-            
+
             // Draw a box for the general statement
             doc.rect(20, y - 4, 170, stmtLines.length * 5 + 10);
-            doc.text(stmtLines, 22, y + 1); 
+            doc.text(stmtLines, 22, y + 1);
             y += stmtLines.length * 5 + 15;
 
             // Supervisor Grading Box
             doc.setFillColor(250, 250, 250);
             doc.rect(20, y, 170, 50, 'FD');
             doc.setFont(fontName, "bold"); doc.text("Evaluation by Company Supervisor:", 25, y + 8);
-            
+
             doc.setFont(fontName, "normal");
             const grades = ['A (Excellent)', 'B (Good)', 'C (Satisfactory)', 'D (Poor)', 'E (Unacceptable)'];
             grades.forEach((g, i) => {
@@ -738,17 +736,17 @@ export default function StudentLogbookPage() {
                 }
                 doc.text(g, 31 + i * 32, y + 19);
             });
-            
+
             doc.setFontSize(8);
             doc.text(`Name of Supervisor: ${log.supervisorName || "____________________"}`, 25, y + 35);
             doc.text(`Date Signed: ${log.supervisorDate ? new Date(log.supervisorDate).toLocaleDateString() : "____________________"}`, 120, y + 35);
             doc.text(`Digital Signature: ${log.supervisorSignature ? "[SIGNED]" : "____________________"}`, 25, y + 45);
             doc.setFontSize(9);
 
-            addFooter(8 + weekNum);
+            addFooter(displayPageNum);
         }
 
-        let currentPageNum = 8 + weeksToRender.length + 1;
+        let currentPageNum = 8 + weeksToRender.length;
 
         // ─── RESULT REPORT ─────────────────────────────────────────────────────────
         doc.addPage();
@@ -770,7 +768,7 @@ export default function StudentLogbookPage() {
         });
 
         y = (doc as any).lastAutoTable.finalY + 5;
-        
+
         // Goals and Contents side-by-side
         autoTable(doc, {
             startY: y,
@@ -848,7 +846,7 @@ export default function StudentLogbookPage() {
         // ─── RESULT REPORT CONT. (Feedback) ────────────────────────────────────────
         doc.addPage();
         addHeader("RESULT REPORT (CONTINUED)", currentPageNum);
-        
+
         yPos = 35;
         doc.setFont(fontName, "bold"); doc.setFontSize(11);
         doc.text("Programme Feedback Questions", 20, yPos); yPos += 6;
@@ -884,13 +882,28 @@ export default function StudentLogbookPage() {
             "Collaborating with HW engineers in the integration of SW and HW components.",
             "Conducting performance optimization and memory management for embedded systems.",
         ];
-        
+
         autoTable(doc, {
             startY: yPos,
-            body: allActivities.map(a => [report.programmeTypes?.includes(a) ? '[ X ]' : '[   ]', a]),
+            body: allActivities.map(a => [{ content: '', isChecked: report.programmeTypes?.includes(a) }, a]) as any[],
             theme: 'plain',
             styles: { fontSize: 8.5, cellPadding: 2, font: fontName, textColor: 0 },
-            columnStyles: { 0: { halign: 'center', cellWidth: 15, fontStyle: 'bold' }, 1: { cellWidth: 155 } }
+            columnStyles: { 0: { halign: 'center', cellWidth: 10 }, 1: { cellWidth: 160 } },
+            didDrawCell: (data: any) => {
+                if (data.column.index === 0 && data.cell.section === 'body') {
+                    const isChecked = data.cell.raw.isChecked;
+                    const dim = 3.5;
+                    const x = data.cell.x + (data.cell.width - dim) / 2;
+                    const y = data.cell.y + (data.cell.height - dim) / 2 + 0.5;
+                    doc.setDrawColor(0);
+                    doc.setLineWidth(0.3);
+                    doc.rect(x, y, dim, dim);
+                    if (isChecked) {
+                        doc.setFillColor(0);
+                        doc.rect(x + 0.8, y + 0.8, dim - 1.6, dim - 1.6, 'F');
+                    }
+                }
+            }
         });
 
         yPos = (doc as any).lastAutoTable.finalY + 5;
@@ -902,7 +915,7 @@ export default function StudentLogbookPage() {
         yPos += 10;
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, yPos);
         doc.text("Signature of Student: _______________________", 110, yPos);
-        
+
         addFooter(currentPageNum);
         currentPageNum++;
 
@@ -967,37 +980,37 @@ export default function StudentLogbookPage() {
             ]],
             body: [
                 // Assignments
-                [{ content: 'ASSIGNMENTS', rowSpan: assignmentsRowCount, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', fillColor: [245, 245, 248] } }, '1', ...t1, { content: '/40', styles: { halign: 'center', fontStyle: 'bold' } }, { content: `SUM\n${assignmentsScore}`, rowSpan: assignmentsRowCount, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', fontSize: 14 } }],
+                [{ content: 'ASSIGNMENTS', rowSpan: assignmentsRowCount, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', fillColor: [245, 245, 248], fontSize: 6.5 } }, '1', ...t1, { content: '/40', styles: { halign: 'center', fontStyle: 'bold' } }, { content: `SUM\n${assignmentsScore}`, rowSpan: assignmentsRowCount, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', fontSize: 10 } }],
                 ...(assignmentsRowCount > 1 ? [['2', ...t2, '']] : []),
                 ...(assignmentsRowCount > 2 ? [['3', ...t3, '']] : []),
                 ...(assignmentsRowCount > 3 ? [['4', ...t4, '']] : []),
-                
+
                 // Attitude
-                [{ content: 'ATTITUDE', rowSpan: 3, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', fillColor: [245, 245, 248] } }, '1', ...a1, { content: '/30', styles: { halign: 'center', fontStyle: 'bold' } }, { content: `SUM\n${attitudeScore}`, rowSpan: 3, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', fontSize: 14 } }],
+                [{ content: 'ATTITUDE', rowSpan: 3, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', fillColor: [245, 245, 248], fontSize: 6.5 } }, '1', ...a1, { content: '/30', styles: { halign: 'center', fontStyle: 'bold' } }, { content: `SUM\n${attitudeScore}`, rowSpan: 3, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', fontSize: 10 } }],
                 ['2', ...a2, ''],
                 ['3', ...a3, ''],
 
                 // Safety
-                [{ content: 'SAFETY MANAGEMENT', rowSpan: 3, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', fillColor: [245, 245, 248] } }, '1', ...s1, { content: '/30', styles: { halign: 'center', fontStyle: 'bold' } }, { content: `TOTAL SCORE\n${rawTotalScore}/100`, rowSpan: 3, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', fontSize: 16 } }],
+                [{ content: 'SAFETY MANAGEMENT', rowSpan: 3, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', fillColor: [245, 245, 248], fontSize: 6 } }, '1', ...s1, { content: '/30', styles: { halign: 'center', fontStyle: 'bold' } }, { content: `TOTAL SCORE\n${rawTotalScore}/100`, rowSpan: 3, styles: { halign: 'center', valign: 'middle', fontStyle: 'bold', fontSize: 12 } }],
                 ['2', ...s2, ''],
                 ['3', ...s3, '']
             ] as any[],
             theme: 'grid',
-            styles: { font: fontName, fontSize: 8, textColor: 0, lineColor: [200, 200, 200], cellPadding: 4, minCellHeight: 12 },
+            styles: { font: fontName, fontSize: 7, textColor: 0, lineColor: [200, 200, 200], cellPadding: 3, minCellHeight: 12 },
             headStyles: { fillColor: 255, textColor: [200, 200, 200], fontStyle: 'bold', halign: 'center' },
-            columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 8, halign: 'center' }, 2: { cellWidth: 55 }, 3: { cellWidth: 10 }, 4: { cellWidth: 10 }, 5: { cellWidth: 10 }, 6: { cellWidth: 10 }, 7: { cellWidth: 10 }, 8: { cellWidth: 12 }, 9: { cellWidth: 35 } }
+            columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 5, halign: 'center' }, 2: { cellWidth: 50 }, 3: { cellWidth: 8.5 }, 4: { cellWidth: 8.5 }, 5: { cellWidth: 8.5 }, 6: { cellWidth: 8.5 }, 7: { cellWidth: 8.5 }, 8: { cellWidth: 10 }, 9: { cellWidth: 32 } }
         });
 
         // Attendance Record and Final Weighting
         yPos = (doc as any).lastAutoTable.finalY + 5;
-        
+
         autoTable(doc, {
             startY: yPos,
             body: [
-                [{ content: 'ATTENDANCE', styles: { fontStyle: 'bold', fillColor: [0, 0, 0], textColor: 255, halign: 'center', valign: 'middle', cellWidth: 25 } }, 
-                 { content: `Days of Absence: ${absentDays} \n\n* 10 points are deducted for each absence from work per day. However, points will not be deducted for sick leave with supporting documents attached.\n* Unauthorised late arrival, early departure without notice, 3 times of unauthorised results are treated as 1 day of absence from work`, styles: { fontSize: 7, fontStyle: 'italic', cellWidth: 100 } },
-                 { content: `${attendanceRaw} / 100`, styles: { fontStyle: 'bold', halign: 'center', valign: 'middle', fillColor: [240, 240, 240] } },
-                 { content: `Final Weighted\n\n${finalWeightedTotal} / 100`, styles: { fontStyle: 'bold', halign: 'center', valign: 'middle', fillColor: [0, 0, 0], textColor: 255 } }]
+                [{ content: 'ATTENDANCE', styles: { fontStyle: 'bold', fillColor: [0, 0, 0], textColor: 255, halign: 'center', valign: 'middle', cellWidth: 25 } },
+                { content: `Days of Absence: ${absentDays} \n\n* 10 points are deducted for each absence from work per day. However, points will not be deducted for sick leave with supporting documents attached.\n* Unauthorised late arrival, early departure without notice, 3 times of unauthorised results are treated as 1 day of absence from work`, styles: { fontSize: 7, fontStyle: 'italic', cellWidth: 100 } },
+                { content: `${attendanceRaw} / 100`, styles: { fontStyle: 'bold', halign: 'center', valign: 'middle', fillColor: [240, 240, 240] } },
+                { content: `Final Weighted\n\n${finalWeightedTotal} / 100`, styles: { fontStyle: 'bold', halign: 'center', valign: 'middle', fillColor: [0, 0, 0], textColor: 255 } }]
             ],
             theme: 'grid',
             styles: { font: fontName, textColor: 0, lineColor: 0 }
@@ -1026,7 +1039,7 @@ export default function StudentLogbookPage() {
             const log = weeklyLogs.find(l => l.weekNumber === week.number);
             const filledDaysCount = [log?.mondayTask, log?.tuesdayTask, log?.wednesdayTask, log?.thursdayTask, log?.fridayTask].filter(t => t && t.trim().length > 0).length;
             const status = log?.status === 'APPROVED' ? 'Approved' : log?.status === 'SUBMITTED' ? 'Submitted' : log?.status === 'REJECTED' ? 'Rejected' : 'Pending';
-            
+
             return [
                 `Week ${week.number}`,
                 `${new Date(week.start).toLocaleDateString()} to ${new Date(week.end).toLocaleDateString()}`,
@@ -1044,7 +1057,7 @@ export default function StudentLogbookPage() {
             styles: { font: fontName, fontSize: 9, textColor: 0, lineColor: 0, cellPadding: 3, halign: 'center' },
             headStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' }
         });
-        
+
         addFooter(currentPageNum);
         currentPageNum++;
 
@@ -2348,4 +2361,4 @@ export default function StudentLogbookPage() {
             </main>
         </div>
     );
-}
+} 
