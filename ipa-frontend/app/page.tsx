@@ -244,7 +244,7 @@ export default function LandingPage() {
 
             <div className="grid md:grid-cols-3 gap-8">
               {[
-                { name: "Sandrine U.", role: "Software Engineer Intern", text: "The IPA system streamlined my entire attachment process. The logbook generation tool saved me hours of administrative work.", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&q=80&fit=crop" },
+                { name: "Sandrine U.", role: "Software Engineer Intern", text: "The IAP system streamlined my entire attachment process. The logbook generation tool saved me hours of administrative work.", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&q=80&fit=crop" },
                 { name: "Jean Paul N.", role: "Civil Engineering Student", text: "Matching with a top-tier construction firm was seamless. The structured objectives kept me focused on my learning goals.", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&q=80&fit=crop" },
                 { name: "Divine K.", role: "UI/UX Design Intern", text: "Professional, modern, and efficient. This portal is a testament to the high standards of RCA's industrial attachment program.", image: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=400&q=80&fit=crop" }
               ].map((item, i) => (
@@ -324,7 +324,7 @@ export default function LandingPage() {
                   viewport={{ once: true }}
                   className="text-primary font-black uppercase tracking-[0.3em] text-xs mb-4"
                 >
-                  The IPA Advantage
+                  The IAP Advantage
                 </motion.div>
                 <motion.h2
                   initial={{ opacity: 0, y: 20 }}

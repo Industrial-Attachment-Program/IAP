@@ -1,6 +1,6 @@
-# IPA Backend
+# IAP Backend
 
-Industrial Placement Application (IPA) - Backend API built with NestJS, PostgreSQL, and Prisma.
+Industrial Placement Application (IAP) - Backend API built with NestJS, PostgreSQL, and Prisma.
 
 ## 🚀 Quick Start
 
@@ -100,7 +100,7 @@ npm run prisma:seed      # Seed database
 ## 📁 Project Structure
 
 ```
-ipa-backend/
+iap-backend/
 ├── src/
 │   ├── admin/           # Admin management
 │   ├── auth/            # Authentication & JWT

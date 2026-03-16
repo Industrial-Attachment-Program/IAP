@@ -1,4 +1,4 @@
-**IPA Internship Management System** is a full-stack web application that helps manage internships in schools or institutions.  
+**IAP Internship Management System** is a full-stack web application that helps manage internships in schools or institutions.  
 It allows:
 
 - **Students** to track tasks, update profiles, and receive ratings.  
@@ -33,5 +33,5 @@ The system also sends **automated profile completion emails** and supports secur
 
 1. Clone the repo:  
 ```bash
-git clone https://github.com/utujesandrine456/IPA.git
+git clone https://github.com/utujesandrine456/IAP.git
 cd ipa

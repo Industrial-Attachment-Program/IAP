@@ -4,6 +4,6 @@ import { Controller, Get } from '@nestjs/common';
 export class AppController {
     @Get()
     getHello(): string {
-        return 'IPA Backend API is running';
+        return 'IAP Backend API is running';
     }
 }

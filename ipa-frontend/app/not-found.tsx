@@ -62,7 +62,7 @@ export default function NotFound() {
                     </div>
 
                     <div className="mt-24 text-neutral-300 text-[10px] font-bold uppercase tracking-[0.3em] flex items-center gap-3">
-                        <span>IPA System</span>
+                        <span>IAP System</span>
                         <span className="h-1 w-1 rounded-full bg-neutral-200" />
                         <span>Error 404</span>
                     </div>

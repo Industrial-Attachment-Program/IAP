@@ -124,7 +124,7 @@ export default function ForgotPasswordPage() {
                 {/* Mobile brand */}
                 <div className="absolute top-6 left-6 lg:hidden">
                     <Link href="/" className="inline-flex items-center gap-2">
-                        <span className="font-black text-primary text-sm">IPA System</span>
+                        <span className="font-black text-primary text-sm">IAP System</span>
                     </Link>
                 </div>
 

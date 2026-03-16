@@ -4,7 +4,7 @@ import nodemailer from "nodemailer";
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT),
-  secure: false, 
+  secure: false,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASSWORD,
@@ -15,7 +15,7 @@ export async function sendProfileCompletionEmail(to: string, token: string) {
   const profileLink = `${process.env.NEXT_PUBLIC_BASE_URL}/complete-profile?token=${token}`;
 
   const mailOptions = {
-    from: `"IPA System" <${process.env.SMTP_USER}>`,
+    from: `"IAP System" <${process.env.SMTP_USER}>`,
     to,
     subject: "Complete Your Profile",
     html: `

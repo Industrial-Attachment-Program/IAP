@@ -13,8 +13,8 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   const config = new DocumentBuilder()
-    .setTitle('IPA Backend API')
-    .setDescription('Industrial Placement Application (IPA) - API Documentation for managing students, supervisors, tasks, and internship workflows')
+    .setTitle('IAP Backend API')
+    .setDescription('Industrial Placement Application (IAP) - API Documentation for managing students, supervisors, tasks, and internship workflows')
     .setVersion('1.0')
     .addTag('Authentication', 'User authentication and authorization endpoints')
     .addTag('Admin', 'Admin management and system monitoring')
@@ -39,7 +39,7 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document, {
-    customSiteTitle: 'IPA API Documentation',
+    customSiteTitle: 'IAP API Documentation',
     customfavIcon: 'https://nestjs.com/img/logo-small.svg',
     customCss: '.swagger-ui .topbar { display: none }',
   });

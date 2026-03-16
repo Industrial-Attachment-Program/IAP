@@ -91,7 +91,7 @@ export function Sidebar({ role, userId: propUserId }: SidebarProps) {
             <div className="flex h-full flex-col px-3 py-4">
                 <div className="mb-8 flex items-center pl-2.5">
                     <span className="self-center whitespace-nowrap text-3xl font-bold text-primary font-heading">
-                        IPA System
+                        IAP System
                     </span>
                 </div>
 

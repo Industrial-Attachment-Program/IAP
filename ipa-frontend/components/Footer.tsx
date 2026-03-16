@@ -12,7 +12,7 @@ export function Footer() {
                                 <Shield className="h-6 w-6" />
                             </div>
                             <span className="text-xl font-bold font-heading tracking-tight text-white">
-                                IPA System
+                                IAP System
                             </span>
                         </div>
                         <p className="text-white text-sm leading-relaxed">
