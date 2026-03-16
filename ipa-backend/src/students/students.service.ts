@@ -71,7 +71,7 @@ export class StudentsService {
             orderBy: { createdAt: 'desc' },
         });
 
-        const studentsWithLo = students.map(s => ({
+        const studentsWithLo = students.map((s: any) => ({
             ...s,
             loAssigned: !!s.liaisonId
         }));
