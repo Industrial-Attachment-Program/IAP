@@ -11,12 +11,6 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
-    "paths": {
-      "src/*": [
-        "src/*"
-      ]
-    },
     "types": [
       "node",
       "multer"
