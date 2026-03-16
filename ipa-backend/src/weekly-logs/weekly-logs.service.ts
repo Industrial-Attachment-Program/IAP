@@ -236,7 +236,7 @@ export class WeeklyLogsService {
 
             // ─── PAGES 9-22: WEEKLY LOGS (WEEKS 1-14) ──────────────────────────────────
             for (let w = 1; w <= 14; w++) {
-                const log: WeeklyLogEntry = student.weeklyLogs.find(l => l.weekNumber === w) || {};
+                const log: WeeklyLogEntry = student.weeklyLogs.find((l: any) => l.weekNumber === w) || {};
                 doc.addPage();
                 doc.font(fontBold).fontSize(16).text(`Student Log for Industrial Attachment (Week ${w})`, 30, 40, { align: 'center' });
                 doc.font(fontNormal).fontSize(10);
