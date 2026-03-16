@@ -44,15 +44,23 @@ function Field({ label, value }: { label: string; value: string }) {
     );
 }
 
-function LogbookInput({ label, value, onChange, type = "text" }: { label: string; value?: string; onChange: (v: string) => void; type?: string }) {
+function LogbookInput({ label, value, onChange, type = "text", readonly = false }: { label: string; value?: string; onChange: (v: string) => void; type?: string; readonly?: boolean }) {
     return (
         <div className="space-y-2 group">
-            <label className="text-xs font-semibold text-slate-500 group-hover:text-primary transition-colors">{label}</label>
+            <label className={`text-xs font-semibold transition-colors ${readonly ? 'text-slate-400' : 'text-slate-500 group-hover:text-primary'}`}>
+                {label}
+                {readonly && <span className="ml-2 text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded">Auto-filled</span>}
+            </label>
             <input
                 type={type}
-                className="h-12 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm outline-none"
+                className={`h-12 w-full rounded-lg border px-4 text-sm font-medium transition-all shadow-sm outline-none ${
+                    readonly 
+                        ? 'border-slate-100 bg-slate-50 text-slate-600 cursor-not-allowed' 
+                        : 'border-slate-200 bg-white text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20'
+                }`}
                 value={value ?? ""}
                 onChange={(e) => onChange(e.target.value)}
+                readOnly={readonly}
             />
         </div>
     );
@@ -176,6 +184,7 @@ interface WeeklyLog {
     supervisorName?: string;
     supervisorDate?: string;
     supervisorSignature?: boolean;
+    supervisorNote?: string;
     status: 'DRAFT' | 'SUBMITTED' | 'COMPLETED' | 'REJECTED';
 }
 interface IapReport {
@@ -230,6 +239,14 @@ export default function StudentLogbookPage() {
         { id: 5, title: "Assessment Vault", icon: CheckSquare }
     ];
 
+    const getStudentFullName = (student: any) => {
+        if (!student) return "";
+        if (student.firstName && student.lastName) {
+            return `${student.firstName} ${student.lastName}`;
+        }
+        return student.name || "";
+    };
+
     const getSafeLog = (weekNum: number): WeeklyLog => {
         const weekData = generatedWeeksList.find(w => w.number === weekNum);
         const existing = weeklyLogs.find(l => l.weekNumber === weekNum);
@@ -254,6 +271,7 @@ export default function StudentLogbookPage() {
             supervisorSignature: false,
             supervisorName: "",
             supervisorDate: "",
+            supervisorNote: "",
             status: "DRAFT"
         };
 
@@ -283,6 +301,54 @@ export default function StudentLogbookPage() {
     // Auto-fill logic when student data is available
     useEffect(() => {
         if (student) {
+            console.log('Student data:', student);
+            console.log('Supervisor data:', student.supervisor);
+            
+            // Auto-fill supervisor details from supervisor relationship if they're empty
+            setStudent((prev: any) => {
+                if (!prev) return prev;
+                
+                const updated = { ...prev };
+                let changed = false;
+
+                // Auto-fill basic student info from user data if missing
+                if (!updated.email && student.user?.email) {
+                    updated.email = student.user.email;
+                    changed = true;
+                }
+
+                // Auto-fill supervisor details from the supervisor relationship
+                if (student.supervisor?.user && !updated.supervisorName) {
+                    updated.supervisorName = student.supervisor.user.name;
+                    changed = true;
+                    console.log('Auto-filled supervisor name:', student.supervisor.user.name);
+                }
+                if (student.supervisor?.user && !updated.supervisorEmail) {
+                    updated.supervisorEmail = student.supervisor.user.email;
+                    changed = true;
+                }
+                if (student.supervisor?.phone && !updated.supervisorPhone) {
+                    updated.supervisorPhone = student.supervisor.phone;
+                    changed = true;
+                }
+                if (student.supervisor?.department && !updated.supervisorDepartment) {
+                    updated.supervisorDepartment = student.supervisor.department;
+                    changed = true;
+                }
+
+                // Auto-fill liaison officer details if available
+                if (student.liaison?.user && !updated.liaisonOfficerName) {
+                    updated.liaisonOfficerName = student.liaison.user.name;
+                    changed = true;
+                }
+                if (student.liaison?.phone && !updated.liaisonOfficerPhone) {
+                    updated.liaisonOfficerPhone = student.liaison.phone;
+                    changed = true;
+                }
+
+                return changed ? updated : prev;
+            });
+
             // Auto-fill Report if it's empty
             setReport(prev => {
                 const newReport = { ...prev };
@@ -329,9 +395,12 @@ export default function StudentLogbookPage() {
                             updated.endDate = weekData.end;
                             changed = true;
                         }
-                        if (!updated.supervisorName && student.supervisorName) {
-                            updated.supervisorName = student.supervisorName;
+                        // Use supervisor name from relationship or fallback to stored field
+                        const supervisorName = student.supervisor?.user?.name || student.supervisorName;
+                        if (!updated.supervisorName && supervisorName) {
+                            updated.supervisorName = supervisorName;
                             changed = true;
+                            console.log('Auto-filled weekly log supervisor name:', supervisorName);
                         }
 
                         return changed ? updated : log;
@@ -636,7 +705,7 @@ export default function StudentLogbookPage() {
         doc.setFont(fontName, "bold");
         doc.text("Student details:", 20, currentY);
         currentY += 10;
-        drawField("Name of Student", student?.fullName || "", 20, currentY, true);
+        drawField("Name of Student", getStudentFullName(student), 20, currentY, true);
         currentY += 12;
         drawField("Date of Birth", student?.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : "", 20, currentY);
         drawField("ID/Passport No.", student?.idOrPassport || "", 110, currentY);
@@ -990,7 +1059,7 @@ export default function StudentLogbookPage() {
             body: [
                 [
                     { content: 'Name', styles: { font: fontName, fontStyle: 'bold' as any } },
-                    student?.fullName || '',
+                    getStudentFullName(student),
                     { content: 'Name of Unit', styles: { font: fontName, fontStyle: 'bold' as any } },
                     report.nameOfUnit || ''
                 ],
@@ -1073,7 +1142,7 @@ export default function StudentLogbookPage() {
         currentCoordinateY = 35;
         doc.setFontSize(10);
         doc.setFont(fontName, "normal");
-        doc.text(`Student name: ${student?.fullName || '.........................................................................................'}`, 15, currentCoordinateY);
+        doc.text(`Student name: ${getStudentFullName(student) || '.........................................................................................'}`, 15, currentCoordinateY);
         doc.text(`Department/Class: ${student?.year || '.........................................................................................'}`, 120, currentCoordinateY);
 
         currentCoordinateY += 10;
@@ -1224,7 +1293,7 @@ export default function StudentLogbookPage() {
         currentCoordinateY += 12;
 
         const surveyFields = [
-            { label: "Name of Student", value: student?.fullName || "" },
+            { label: "Name of Student", value: getStudentFullName(student) },
             { label: "Reg No.", value: report.regNo || "" },
             { label: "Phone No", value: report.phoneNo || "" },
             { label: "IAP Company attached to", value: student?.companyName || "" },
@@ -1293,14 +1362,14 @@ export default function StudentLogbookPage() {
         doc.text(`Date: ......................................................................... Signature of Student: .........................................................................`, 15, currentCoordinateY);
         doc.text(new Date().toLocaleDateString(), 25, currentCoordinateY);
         doc.setFontSize(12);
-        doc.text(student?.fullName || "Digitally Verified", 145, currentCoordinateY - 1);
+        doc.text(getStudentFullName(student) || "Digitally Verified", 145, currentCoordinateY - 1);
         doc.setFontSize(9);
 
         currentCoordinateY += 12;
         doc.setFont(fontName, "italic");
         doc.text("Please make a photocopy of this form for your own retention before submitting to IAP coordinator.", 105, currentCoordinateY, { align: "center" });
 
-        doc.save(`Logbook_${student?.fullName || "Student"}.pdf`);
+        doc.save(`Logbook_${getStudentFullName(student) || "Student"}.pdf`);
         toast.success("Professional Logbook Generated!");
     };
 
@@ -1581,8 +1650,20 @@ export default function StudentLogbookPage() {
                                             />
                                             <LogbookInput label="Graduation Year" value={student?.graduationYear} onChange={(v) => setStudent({ ...student, graduationYear: v })} />
                                             <LogbookInput label="Cell Phone No." value={student?.phone} onChange={(v) => setStudent({ ...student, phone: v })} />
-                                            <LogbookInput label="Internship Start Date" type="date" value={student?.internshipStart ? new Date(student.internshipStart).toISOString().split('T')[0] : ''} onChange={(v) => setStudent({ ...student, internshipStart: v })} />
-                                            <LogbookInput label="Internship End Date" type="date" value={student?.internshipEnd ? new Date(student.internshipEnd).toISOString().split('T')[0] : ''} onChange={(v) => setStudent({ ...student, internshipEnd: v })} />
+                                            <LogbookInput label="Email Address" value={student?.email || student?.user?.email} onChange={(v) => setStudent({ ...student, email: v })} readonly={!!student?.user?.email} />
+                                            <LogbookInput label="Address" value={student?.address} onChange={(v) => setStudent({ ...student, address: v })} />
+                                            <LogbookInput 
+                                                label="Internship Start Date" 
+                                                type="date" 
+                                                value={student?.internshipStart ? new Date(student.internshipStart).toISOString().split('T')[0] : ''} 
+                                                onChange={(v) => setStudent({ ...student, internshipStart: v })} 
+                                            />
+                                            <LogbookInput 
+                                                label="Internship End Date" 
+                                                type="date" 
+                                                value={student?.internshipEnd ? new Date(student.internshipEnd).toISOString().split('T')[0] : ''} 
+                                                onChange={(v) => setStudent({ ...student, internshipEnd: v })} 
+                                            />
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -1608,10 +1689,30 @@ export default function StudentLogbookPage() {
                                     </CardHeader>
                                     <CardContent className="p-8">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <LogbookInput label="IAP Company Supervisor Name" value={student?.supervisorName} onChange={(v) => setStudent({ ...student, supervisorName: v })} />
-                                            <LogbookInput label="Supervisor Department" value={student?.supervisorDepartment} onChange={(v) => setStudent({ ...student, supervisorDepartment: v })} />
-                                            <LogbookInput label="Supervisor Tel No." value={student?.supervisorPhone} onChange={(v) => setStudent({ ...student, supervisorPhone: v })} />
-                                            <LogbookInput label="Supervisor Email" value={student?.supervisorEmail} onChange={(v) => setStudent({ ...student, supervisorEmail: v })} />
+                                            <LogbookInput 
+                                                label="IAP Company Supervisor Name" 
+                                                value={student?.supervisorName} 
+                                                onChange={(v) => setStudent({ ...student, supervisorName: v })} 
+                                                readonly={true}
+                                            />
+                                            <LogbookInput 
+                                                label="Supervisor Department" 
+                                                value={student?.supervisorDepartment} 
+                                                onChange={(v) => setStudent({ ...student, supervisorDepartment: v })} 
+                                                readonly={true}
+                                            />
+                                            <LogbookInput 
+                                                label="Supervisor Tel No." 
+                                                value={student?.supervisorPhone} 
+                                                onChange={(v) => setStudent({ ...student, supervisorPhone: v })} 
+                                                readonly={true}
+                                            />
+                                            <LogbookInput 
+                                                label="Supervisor Email" 
+                                                value={student?.supervisorEmail} 
+                                                onChange={(v) => setStudent({ ...student, supervisorEmail: v })} 
+                                                readonly={true}
+                                            />
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -1856,22 +1957,84 @@ export default function StudentLogbookPage() {
                                                                             { id: 'E', label: 'E (Fail)' }
                                                                         ].map((g) => (
                                                                             <div key={g.id} className="flex items-center gap-2">
-                                                                                <div className={cn(
-                                                                                    "h-6 w-6 border-2 border-slate-900 rounded-sm flex items-center justify-center transition-all",
-                                                                                    currentLog.grade === g.id ? "bg-slate-900" : "bg-white"
-                                                                                )}>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => !isLocked && updateLogField(expandedWeek, 'grade', g.id)}
+                                                                                    disabled={isLocked}
+                                                                                    className={cn(
+                                                                                        "h-6 w-6 border-2 border-slate-900 rounded-sm flex items-center justify-center transition-all",
+                                                                                        currentLog.grade === g.id ? "bg-slate-900" : "bg-white",
+                                                                                        !isLocked && "hover:bg-slate-100 cursor-pointer",
+                                                                                        isLocked && "opacity-60 cursor-not-allowed"
+                                                                                    )}
+                                                                                >
                                                                                     {currentLog.grade === g.id && <Check className="h-4 w-4 text-white" />}
-                                                                                </div>
+                                                                                </button>
                                                                                 <span className="text-sm font-bold text-slate-800">{g.label}</span>
                                                                             </div>
                                                                         ))}
                                                                     </div>
 
                                                                     <div className="space-y-4 pt-4 border-t border-slate-100">
-                                                                        <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                            <div className="space-y-2">
+                                                                                <label className="text-xs font-semibold text-slate-500">
+                                                                                    Supervisor Name
+                                                                                    {(student?.supervisor?.user?.name || student?.supervisorName) && 
+                                                                                        <span className="ml-2 text-xs bg-green-100 text-green-600 px-2 py-1 rounded">Auto-filled</span>
+                                                                                    }
+                                                                                </label>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                                                                    value={(() => {
+                                                                                        // Try multiple sources for supervisor name
+                                                                                        const supervisorName = 
+                                                                                            student?.supervisor?.user?.name || 
+                                                                                            student?.supervisorName || 
+                                                                                            currentLog.supervisorName ||
+                                                                                            "";
+                                                                                        console.log('Displaying supervisor name:', supervisorName, {
+                                                                                            fromRelationship: student?.supervisor?.user?.name,
+                                                                                            fromStudentField: student?.supervisorName,
+                                                                                            fromLog: currentLog.supervisorName
+                                                                                        });
+                                                                                        return supervisorName;
+                                                                                    })()}
+                                                                                    onChange={(e) => updateLogField(expandedWeek, 'supervisorName', e.target.value)}
+                                                                                    placeholder="Enter supervisor's full name"
+                                                                                    disabled={isLocked}
+                                                                                />
+                                                                            </div>
+                                                                            <div className="space-y-2">
+                                                                                <label className="text-xs font-semibold text-slate-500">Date</label>
+                                                                                <input
+                                                                                    type="date"
+                                                                                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                                                                                    value={currentLog.supervisorDate ? new Date(currentLog.supervisorDate).toISOString().split('T')[0] : ""}
+                                                                                    onChange={(e) => updateLogField(expandedWeek, 'supervisorDate', e.target.value)}
+                                                                                    disabled={isLocked}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                        
+                                                                        <div className="space-y-2">
+                                                                            <label className="text-xs font-semibold text-slate-500">Feedback / Note (Optional)</label>
+                                                                            <textarea
+                                                                                className="w-full h-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                                                                                placeholder="Add comments for the student..."
+                                                                                value={currentLog.supervisorNote || ""}
+                                                                                onChange={(e) => updateLogField(expandedWeek, 'supervisorNote', e.target.value)}
+                                                                                disabled={isLocked}
+                                                                            />
+                                                                        </div>
+
+                                                                        <div className="flex flex-col md:flex-row md:items-center gap-4 pt-2">
                                                                             <div className="flex-1 flex items-center gap-2">
                                                                                 <span className="text-sm font-bold whitespace-nowrap">Name of Supervisor:</span>
-                                                                                <div className="flex-1 border-b border-dotted border-slate-400 font-bold text-slate-800">{currentLog.supervisorName || "—"}</div>
+                                                                                <div className="flex-1 border-b border-dotted border-slate-400 font-bold text-slate-800">
+                                                                                    {student?.supervisor?.user?.name || student?.supervisorName || "—"}
+                                                                                </div>
                                                                             </div>
                                                                             <div className="w-48 flex items-center gap-2">
                                                                                 <span className="text-sm font-bold">Date:</span>
@@ -1951,7 +2114,7 @@ export default function StudentLogbookPage() {
                                             <div className="border-2 border-slate-900 rounded-2xl overflow-hidden shadow-sm">
                                                 <div className="grid grid-cols-1 md:grid-cols-4 border-b-2 border-slate-900">
                                                     <div className="p-5 border-b-2 md:border-b-0 md:border-r-2 border-slate-900 font-bold bg-slate-50 flex items-center justify-center text-center">Name of Student</div>
-                                                    <div className="p-5 border-b-2 md:border-b-0 md:border-r-2 border-slate-900 bg-white flex items-center font-medium text-slate-700">{student?.fullName || "—"}</div>
+                                                    <div className="p-5 border-b-2 md:border-b-0 md:border-r-2 border-slate-900 bg-white flex items-center font-medium text-slate-700">{getStudentFullName(student) || "—"}</div>
                                                     <div className="p-5 border-b-2 md:border-b-0 md:border-r-2 border-slate-900 font-bold bg-slate-50 flex items-center justify-center text-center leading-tight">Name of<br />Academic Unit</div>
                                                 </div>
 
@@ -2062,7 +2225,7 @@ export default function StudentLogbookPage() {
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 bg-white p-2">
                                                 {[
-                                                    { label: "Name of Student", value: student?.fullName || "", isControlled: false },
+                                                    { label: "Name of Student", value: getStudentFullName(student), isControlled: false },
                                                     { label: "Reg No.", value: report.regNo || "", key: "regNo", isControlled: true },
                                                     { label: "Phone No", value: report.phoneNo || "", key: "phoneNo", isControlled: true },
                                                     { label: "IAP Company attached to", value: student?.companyName || "", isControlled: false },
@@ -2185,7 +2348,7 @@ export default function StudentLogbookPage() {
                                                         <div className="flex items-end gap-2">
                                                             <span className="text-sm font-bold text-slate-900 shrink-0">Signature of Student:</span>
                                                             <div className="flex-1 border-b-2 border-slate-900 border-dotted h-12 flex items-center justify-center relative">
-                                                                <span className="font-[signature] text-2xl text-slate-800 -rotate-2">{student?.fullName}</span>
+                                                                <span className="font-[signature] text-2xl text-slate-800 -rotate-2">{getStudentFullName(student)}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -2197,7 +2360,7 @@ export default function StudentLogbookPage() {
                                         </div>
                                         <label className="text-[10px] font-semibold uppercase text-slate-400">Full Legal Signature of Student</label>
                                         <div className="h-14 border-b-2 border-slate-900 flex items-center px-6 bg-slate-50/50 rounded-t-xl group">
-                                            <span className="font-[signature] text-3xl text-slate-900 select-none opacity-80 group-hover:opacity-100 transition-opacity -rotate-1">{student?.fullName || "Digitally Verified"}</span>
+                                            <span className="font-[signature] text-3xl text-slate-900 select-none opacity-80 group-hover:opacity-100 transition-opacity -rotate-1">{getStudentFullName(student) || "Digitally Verified"}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -2293,7 +2456,7 @@ export default function StudentLogbookPage() {
                                                     <div className="w-full space-y-4 pt-4 px-4">
                                                         <div className="flex gap-2 items-end">
                                                             <span className="text-sm font-bold whitespace-nowrap">Student name:</span>
-                                                            <div className="flex-1 border-b border-black border-dotted h-5 text-sm uppercase px-2">{student?.fullName || "................................................................................................................................................"}</div>
+                                                            <div className="flex-1 border-b border-black border-dotted h-5 text-sm uppercase px-2">{getStudentFullName(student) || "................................................................................................................................................"}</div>
                                                         </div>
                                                         <div className="flex gap-2 items-end">
                                                             <span className="text-sm font-bold whitespace-nowrap">Department/Class:</span>

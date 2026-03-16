@@ -58,6 +58,27 @@ export function ProfileForm() {
                         const data = roleResult.data;
                         // For students, the response might be { student: { ... } }
                         const actualData = data.student || data.supervisor || data.liaison || data;
+                        
+                        // Auto-fill supervisor details from relationship if available
+                        if (actualData.supervisor?.user && userData.role === "STUDENT") {
+                            actualData.supervisorName = actualData.supervisorName || actualData.supervisor.user.name;
+                            actualData.supervisorEmail = actualData.supervisorEmail || actualData.supervisor.user.email;
+                            actualData.supervisorPhone = actualData.supervisorPhone || actualData.supervisor.phone;
+                            actualData.supervisorDepartment = actualData.supervisorDepartment || actualData.supervisor.department;
+                        }
+                        
+                        // Auto-fill liaison details from relationship if available
+                        if (actualData.liaison?.user && userData.role === "STUDENT") {
+                            actualData.liaisonOfficerName = actualData.liaisonOfficerName || actualData.liaison.user.name;
+                            actualData.liaisonOfficerPhone = actualData.liaisonOfficerPhone || actualData.liaison.phone;
+                        }
+                        
+                        // Ensure full name is constructed from firstName and lastName if available
+                        if (actualData.firstName && actualData.lastName && !name) {
+                            setName(`${actualData.firstName} ${actualData.lastName}`);
+                        }
+                        
+                        console.log('Profile data loaded:', actualData);
                         setExtraFields(actualData);
                     }
                 }
@@ -217,6 +238,12 @@ export function ProfileForm() {
                                 value={extraFields.dateOfBirth ? new Date(extraFields.dateOfBirth).toISOString().split('T')[0] : ""}
                                 onChange={(e) => setExtraFields({ ...extraFields, dateOfBirth: e.target.value })}
                             />
+                            <Input
+                                label="ID/Passport Number"
+                                value={extraFields.idOrPassport || ""}
+                                onChange={(e) => setExtraFields({ ...extraFields, idOrPassport: e.target.value })}
+                                placeholder="ID or Passport Number"
+                            />
                             <div className="grid grid-cols-2 gap-4">
                                 <Input
                                     label="Year of Study"
@@ -231,6 +258,12 @@ export function ProfileForm() {
                                     placeholder="2025"
                                 />
                             </div>
+                            <Input
+                                label="Intake Year"
+                                value={extraFields.intakeYear || ""}
+                                onChange={(e) => setExtraFields({ ...extraFields, intakeYear: e.target.value })}
+                                placeholder="e.g. 2022"
+                            />
                         </>
                     )}
                     {(user?.role === "SUPERVISOR" || user?.role === "LIAISON") && (
@@ -286,6 +319,18 @@ export function ProfileForm() {
                             value={extraFields.absentDays || 0}
                             onChange={(e) => setExtraFields({ ...extraFields, absentDays: parseInt(e.target.value) })}
                         />
+                        <Input
+                            label="Internship Start Date"
+                            type="date"
+                            value={extraFields.internshipStart ? new Date(extraFields.internshipStart).toISOString().split('T')[0] : ""}
+                            onChange={(e) => setExtraFields({ ...extraFields, internshipStart: e.target.value })}
+                        />
+                        <Input
+                            label="Internship End Date"
+                            type="date"
+                            value={extraFields.internshipEnd ? new Date(extraFields.internshipEnd).toISOString().split('T')[0] : ""}
+                            onChange={(e) => setExtraFields({ ...extraFields, internshipEnd: e.target.value })}
+                        />
                     </div>
 
                     <div className="mt-6 space-y-4">
@@ -311,6 +356,12 @@ export function ProfileForm() {
                                 label="Supervisor Phone"
                                 value={extraFields.supervisorPhone || ""}
                                 onChange={(e) => setExtraFields({ ...extraFields, supervisorPhone: e.target.value })}
+                            />
+                            <Input
+                                label="Supervisor Department"
+                                value={extraFields.supervisorDepartment || ""}
+                                onChange={(e) => setExtraFields({ ...extraFields, supervisorDepartment: e.target.value })}
+                                placeholder="e.g. IT Department"
                             />
                         </div>
                     </div>
