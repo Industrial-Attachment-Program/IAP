@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
         select: { id: true },
       });
 
-      const studentIds = students.map((s) => s.id);
+      const studentIds = students.map((s: { id: number }) => s.id);
 
       const tasks = await prisma.task.findMany({
         where: {

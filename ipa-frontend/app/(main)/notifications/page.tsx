@@ -97,7 +97,6 @@ export default function NotificationsPage() {
             case "ERROR": return <AlertCircle className="h-5 w-5 text-red-500" />;
             case "WARNING": return <AlertCircle className="h-5 w-5 text-yellow-500" />;
             case "TASK": return <FileText className="h-5 w-5 text-blue-500" />;
-            case "MESSAGE": return <MessageSquare className="h-5 w-5 text-purple-500" />;
             default: return <Info className="h-5 w-5 text-blue-500" />;
         }
     };
@@ -134,7 +133,7 @@ export default function NotificationsPage() {
                             </div>
                             <h3 className="text-lg font-semibold text-primary">No notifications yet</h3>
                             <p className="text-sm text-primary/60 max-w-xs mx-auto">
-                                When you receive alerts about your tasks or messages, they will appear here.
+                                When you receive alerts about your tasks, they will appear here.
                             </p>
                         </div>
                     ) : (

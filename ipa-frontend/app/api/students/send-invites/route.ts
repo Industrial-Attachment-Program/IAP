@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
         where: { profileCompleted: false },
         include: { user: true },
       });
-      studentIds = students.map((s) => s.id);
+      studentIds = students.map((s: any) => s.id);
     }
 
     const results: {success: { email: string; name: string; studentId: string }[]; errors: { row: any; error: string }[];} = {success: [], errors: [],};

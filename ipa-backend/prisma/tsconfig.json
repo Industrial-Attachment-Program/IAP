@@ -1,13 +1,10 @@
 {
-    "extends": "../tsconfig.json",
-    "compilerOptions": {
-        "rootDir": ".",
-        "outDir": "../dist/prisma",
-        "types": [
-            "node"
-        ]
-    },
-    "include": [
-        "./**/*"
-    ]
+  "compilerOptions": {
+    "composite": true,
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true
+  },
+  "include": ["**/*"],
+  "exclude": []
 }
