@@ -43,3 +43,6 @@ uploads/
 
 # Documentation (if you want to keep it out)
 /docs
+
+# Database seed file (contains sensitive credentials)
+prisma/seed.ts
