@@ -252,10 +252,12 @@ export default function AdminDashboard() {
         }
 
         try {
+            console.log("FRONTEND: Sending invites. API_URL: /students/send-invites");
             const result = await apiFetch("/students/send-invites", {
                 method: "POST",
                 body: JSON.stringify({ studentIds: idsToSend }),
             }) as any;
+            console.log("FRONTEND: Invite response status:", result.status);
 
             if (result.ok) {
                 const data = result.data;

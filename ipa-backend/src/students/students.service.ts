@@ -377,6 +377,7 @@ export class StudentsService {
     }
 
     async sendInvites(body: any) {
+        console.log("INVITE: Starting sendInvites with body:", JSON.stringify(body));
         let { studentIds } = body;
         if (!studentIds || studentIds.length === 0) {
             const students = await this.prisma.student.findMany({
@@ -385,10 +386,12 @@ export class StudentsService {
             });
             studentIds = students.map((s: any) => s.id);
         }
+        console.log(`INVITE: Processing ${studentIds.length} students`);
 
         const results: { success: any[]; errors: any[] } = { success: [], errors: [] };
         for (const id of studentIds) {
             try {
+                console.log(`INVITE: Fetching student ${id}`);
                 const student = await this.prisma.student.findUnique({
                     where: { id: Number(id) },
                     include: { user: true },

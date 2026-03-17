@@ -5,10 +5,17 @@ import path from 'path';
 // Load .env explicitly for standalone usage/utils
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
+console.log("SMTP CONFIG CHECK:", {
     host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: false, // true for 465, false for other ports
+    port: process.env.SMTP_PORT,
+    user: process.env.SMTP_USER,
+    hasPassword: !!process.env.SMTP_PASSWORD
+});
+
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: 465,
+    secure: true, // true for 465, false for other ports
     family: 4, // Force IPv4 to avoid ENETUNREACH on IPv6
     auth: {
         user: process.env.SMTP_USER,
