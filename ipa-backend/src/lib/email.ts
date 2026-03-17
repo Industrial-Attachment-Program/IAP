@@ -13,16 +13,19 @@ console.log("SMTP CONFIG CHECK:", {
 });
 
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: 587,
-    secure: false, // false for 587 (STARTTLS), true for 465 (SSL)
-    family: 4, // Force IPv4 to avoid ENETUNREACH on IPv6
+    service: 'gmail',
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
     },
+    family: 4, // Force IPv4
+    connectionTimeout: 15000, // 15 seconds
+    greetingTimeout: 15000,
+    socketTimeout: 20000,
+    logger: true, // Log SMTP traffic
+    debug: true,  // Include debug info
     tls: {
-        rejectUnauthorized: false // Helps in some cloud environments
+        rejectUnauthorized: false
     }
 } as any);
 
