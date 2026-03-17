@@ -1,9 +1,14 @@
 import nodemailer from "nodemailer";
+import * as dotenv from 'dotenv';
+import path from 'path';
+
+// Load .env explicitly for standalone usage/utils
+dotenv.config();
 
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT),
-    secure: false,
+    secure: false, // true for 465, false for other ports
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
@@ -12,7 +17,7 @@ const transporter = nodemailer.createTransport({
 
 
 export async function sendProfileCompletionEmail(to: string, token: string) {
-    const websiteUrl = process.env.WEBSITE_URL || "http://localhost:3000";
+    const websiteUrl = process.env.WEBSITE_URL || "https://iap-system.vercel.app";
     const profileLink = `${websiteUrl}/complete-profile?token=${token}`;
 
     const mailOptions = {

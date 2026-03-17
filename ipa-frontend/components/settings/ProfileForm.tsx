@@ -65,6 +65,7 @@ export function ProfileForm() {
                             actualData.supervisorEmail = actualData.supervisorEmail || actualData.supervisor.user.email;
                             actualData.supervisorPhone = actualData.supervisorPhone || actualData.supervisor.phone;
                             actualData.supervisorDepartment = actualData.supervisorDepartment || actualData.supervisor.department;
+                            actualData.supervisorDesignation = actualData.supervisorDesignation || "";
                         }
                         
                         // Auto-fill liaison details from relationship if available
@@ -72,10 +73,31 @@ export function ProfileForm() {
                             actualData.liaisonOfficerName = actualData.liaisonOfficerName || actualData.liaison.user.name;
                             actualData.liaisonOfficerPhone = actualData.liaisonOfficerPhone || actualData.liaison.phone;
                         }
+
+                        // Ensure internship details have at least empty strings to avoid uncontrolled/controlled component issues
+                        actualData.companyName = actualData.companyName || "";
+                        actualData.companyAddress = actualData.companyAddress || "";
+                        actualData.companyPhone = actualData.companyPhone || "";
+                        actualData.companyEmail = actualData.companyEmail || "";
+                        actualData.companyPOBox = actualData.companyPOBox || "";
                         
+                        // Ensure dates are correctly formatted for the HTML5 date inputs
+                        if (actualData.dateOfBirth) {
+                            actualData.dateOfBirth = new Date(actualData.dateOfBirth).toISOString().split('T')[0];
+                        }
+                        if (actualData.internshipStart) {
+                            actualData.internshipStart = new Date(actualData.internshipStart).toISOString().split('T')[0];
+                        }
+                        if (actualData.internshipEnd) {
+                            actualData.internshipEnd = new Date(actualData.internshipEnd).toISOString().split('T')[0];
+                        }
+
                         // Ensure full name is constructed from firstName and lastName if available
-                        if (actualData.firstName && actualData.lastName && !name) {
-                            setName(`${actualData.firstName} ${actualData.lastName}`);
+                        if (actualData.firstName && actualData.lastName) {
+                            const fullName = `${actualData.firstName} ${actualData.lastName}`;
+                            setName(fullName);
+                        } else if (!name && actualData.user?.name) {
+                            setName(actualData.user.name);
                         }
                         
                         console.log('Profile data loaded:', actualData);

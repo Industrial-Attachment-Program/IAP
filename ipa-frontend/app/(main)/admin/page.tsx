@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/Input";
 import { Upload, Users, FileText, PieChart, TrendingUp, Download, Plus, Edit, Trash2, Mail, CheckCircle2, XCircle, Loader2, Activity, Clock, UserPlus } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import toast, { Toaster } from "react-hot-toast";
 
 interface Student {
     id: string;
@@ -66,8 +67,6 @@ export default function AdminDashboard() {
     const [uploadResult, setUploadResult] = useState<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [creatingUser, setCreatingUser] = useState(false);
-    const [createMessage, setCreateMessage] = useState<string | null>(null);
-    const [createError, setCreateError] = useState<string | null>(null);
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
     const [liaisons, setLiaisons] = useState<Liaison[]>([]);
@@ -132,13 +131,20 @@ export default function AdminDashboard() {
         setAssigningRole({ id: studentId, role });
         try {
             const body = role === 'supervisor' ? { supervisorId: roleId } : { liaisonId: roleId };
-            await apiFetch(`/students/${studentId}`, {
+            const result = await apiFetch(`/students/${studentId}`, {
                 method: "PATCH",
                 body: JSON.stringify(body),
-            });
-            fetchStudents();
-        } catch (error) {
+            }) as any;
+            
+            if (result.ok) {
+                toast.success(`${role === 'supervisor' ? 'Supervisor' : 'Liaison'} assigned successfully`);
+                fetchStudents();
+            } else {
+                toast.error(result.error || `Failed to assign ${role}`);
+            }
+        } catch (error: any) {
             console.error(`Error assigning ${role}:`, error);
+            toast.error(error.message || `Failed to assign ${role}`);
         } finally {
             setAssigningRole(null);
         }
@@ -167,8 +173,6 @@ export default function AdminDashboard() {
     const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
         setCreatingUser(true);
-        setCreateMessage(null);
-        setCreateError(null);
 
         try {
             const result = await apiFetch("/admin/add-user", {
@@ -177,7 +181,7 @@ export default function AdminDashboard() {
             }) as any;
 
             if (result.ok) {
-                setCreateMessage("User created successfully");
+                toast.success(`${newUser.role.charAt(0) + newUser.role.slice(1).toLowerCase()} created successfully`);
                 setNewUser({
                     name: "",
                     email: "",
@@ -187,11 +191,11 @@ export default function AdminDashboard() {
                     password: "",
                 });
             } else {
-                setCreateError(result.error || "Failed to create user");
+                toast.error(result.error || "Failed to create user");
             }
         } catch (err: any) {
             console.error("Error creating user:", err);
-            setCreateError(err.message || "Failed to create user");
+            toast.error(err.message || "Failed to create user");
         } finally {
             setCreatingUser(false);
         }
@@ -256,18 +260,18 @@ export default function AdminDashboard() {
             if (result.ok) {
                 const data = result.data;
                 if (data?.success > 0) {
-                    alert(`Successfully sent ${data.success} invitation(s)!`);
+                    toast.success(`Successfully sent ${data.success} invitation(s)!`);
                     setSelectedStudents(new Set());
                     fetchStudents();
                 } else {
-                    alert(`Failed to send invitations: ${data?.results?.errors?.[0]?.error || "Unknown error"}`);
+                    toast.error(`Failed to send invitations: ${data?.results?.errors?.[0]?.error || "Unknown error"}`);
                 }
             } else {
-                alert(`Error: ${result.error || "Failed to send invites"}`);
+                toast.error(result.error || "Failed to send invites");
             }
         } catch (error: any) {
             console.error("Error sending invites:", error);
-            alert(error.message || "Failed to send invitations");
+            toast.error(error.message || "Failed to send invitations");
         } finally {
             if (studentIds && studentIds.length === 1) {
                 setInvitingStudentIds(prev => {
@@ -306,18 +310,19 @@ export default function AdminDashboard() {
         totalStudents > 0 ? Math.round((completedProfiles / totalStudents) * 100) : 0;
 
     return (
-        <div className="space-y-6">
-            <div
-                className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-neutral/10 max-w-6xl mx-auto"
-            >
-                <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 rounded-full bg-primary/5 blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 -mb-4 -ml-4 h-32 w-32 rounded-full bg-success/5 blur-3xl"></div>
+        <>
+            <div className="space-y-6">
+                <div
+                    className="relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-neutral/10 max-w-6xl mx-auto"
+                >
+                    <div className="absolute top-0 right-0 -mt-4 -mr-4 h-32 w-32 rounded-full bg-primary/5 blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 -mb-4 -ml-4 h-32 w-32 rounded-full bg-success/5 blur-3xl"></div>
 
-                <div className="relative z-10 flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-primary mb-2">Welcome back, Admin</h1>
-                        <p className="text-primary text-lg">"Build skills & networks for the future leaders."</p>
-                    </div>
+                    <div className="relative z-10 flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-primary mb-2">Welcome back, Admin</h1>
+                            <p className="text-primary text-lg">"Build skills & networks for the future leaders."</p>
+                        </div>
                     <div className="flex gap-4">
                         <div className="text-right">
                             <p className="text-sm font-medium text-primary">Current Academic Year</p>
@@ -518,14 +523,7 @@ export default function AdminDashboard() {
                             />
 
                             <div className="md:col-span-2 flex items-center justify-between mt-2">
-                                <div className="space-y-1">
-                                    {createMessage && (
-                                        <p className="text-sm text-primary">{createMessage}</p>
-                                    )}
-                                    {createError && (
-                                        <p className="text-sm text-red-600">{createError}</p>
-                                    )}
-                                </div>
+                                <div />
                                 <Button
                                     type="submit"
                                     disabled={creatingUser}
@@ -732,7 +730,9 @@ export default function AdminDashboard() {
                     </CardContent>
                 </Card>
             </div>
-        </div>
+            </div>
+            <Toaster position="top-right" />
+        </>
     );
 }
 

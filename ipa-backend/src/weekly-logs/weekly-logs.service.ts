@@ -110,6 +110,7 @@ export class WeeklyLogsService {
                 iapReport: true,
                 tasks: true,
                 ratings: true,
+                user: true,
                 supervisor: {
                     include: {
                         user: true
@@ -154,8 +155,13 @@ export class WeeklyLogsService {
             doc.lineWidth(1).moveTo(150, 130).lineTo(450, 130).stroke();
 
             let cy = 160;
+            let studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim();
+            if (!studentName && (student as any).user?.name) {
+                studentName = (student as any).user.name;
+            }
+            
             doc.font(fontBold).fontSize(11).text('Student details:', 40, cy); cy += 15;
-            drawFormBox(40, cy, 515, 35, 'Name of Student', `${student.firstName} ${student.lastName}`); cy += 40;
+            drawFormBox(40, cy, 515, 35, 'Name of Student', studentName); cy += 40;
             drawFormBox(40, cy, 515, 35, 'Date of Birth', student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : ''); cy += 40;
             drawFormBox(40, cy, 250, 35, 'ID/Passport No.', student.idOrPassport);
             drawFormBox(305, cy, 250, 35, 'Reg No.', student.studentNumber); cy += 40;

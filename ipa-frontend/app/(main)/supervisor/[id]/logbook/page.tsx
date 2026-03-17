@@ -88,6 +88,7 @@ export default function SupervisorLogbookPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [logFilter, setLogFilter] = useState<'SUBMITTED' | 'ALL'>('SUBMITTED');
     const [studentSearch, setStudentSearch] = useState("");
+    const [currentSupervisorName, setCurrentSupervisorName] = useState("");
 
     const params = useParams();
     const supervisorId = params.id ? Number(params.id) : undefined;
@@ -113,6 +114,18 @@ export default function SupervisorLogbookPage() {
             console.error("Error fetching students:", error);
         }
     };
+
+    useEffect(() => {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+            try {
+                const user = JSON.parse(storedUser);
+                if (user.name) setCurrentSupervisorName(user.name);
+            } catch (e) {
+                console.error("Error parsing user from localStorage", e);
+            }
+        }
+    }, []);
 
     useEffect(() => {
         if (supervisorId) {
@@ -403,7 +416,7 @@ export default function SupervisorLogbookPage() {
                                                         id="review-name"
                                                         className="w-full h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-primary/20 outline-none disabled:bg-slate-50 disabled:text-slate-400"
                                                         placeholder="Your Full Name"
-                                                        defaultValue={selectedWeeklyLog.supervisorName || ""}
+                                                        defaultValue={selectedWeeklyLog.supervisorName || currentSupervisorName}
                                                         disabled={selectedWeeklyLog.status === 'COMPLETED' || isSaving}
                                                     />
                                                 </div>

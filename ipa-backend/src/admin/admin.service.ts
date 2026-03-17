@@ -109,6 +109,22 @@ export class AdminService {
                         },
                     },
                 } : {}),
+                ...(role === 'STUDENT' ? {
+                    studentProfile: {
+                        create: {
+                            studentNumber: `ST-${Date.now()}`, // Temporary ID
+                            firstName: name.split(' ')[0],
+                            lastName: name.split(' ').slice(1).join(' ') || ' ',
+                            email: email,
+                            // Connect to a default supervisor if one exists
+                            supervisor: {
+                                connect: {
+                                    id: (await this.prisma.supervisor.findFirst())?.id || 1
+                                }
+                            }
+                        },
+                    },
+                } : {}),
             },
         });
 

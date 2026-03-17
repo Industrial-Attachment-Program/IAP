@@ -100,8 +100,8 @@ export default function StudentDashboard() {
                     companyAddress: s.companyAddress || "",
                     supervisorName: s.supervisorName || "",
                     supervisorEmail: s.supervisorEmail || "",
-                    internshipStart: s.internshipStart ? s.internshipStart.split('T')[0] : "",
-                    internshipEnd: s.internshipEnd ? s.internshipEnd.split('T')[0] : "",
+                    internshipStart: s.internshipStart ? new Date(s.internshipStart).toISOString().split('T')[0] : "",
+                    internshipEnd: s.internshipEnd ? new Date(s.internshipEnd).toISOString().split('T')[0] : "",
                 });
                 if (s.supervisor) {
                     setSupervisorInfo({
