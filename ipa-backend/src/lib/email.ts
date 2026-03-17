@@ -33,12 +33,19 @@ export async function sendProfileCompletionEmail(to: string, token: string) {
     };
 
     try {
+        if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+            console.error("SMTP configuration is missing in environment variables!");
+            throw new Error("Email configuration is missing on the server.");
+        }
+
         const info = await transporter.sendMail(mailOptions);
         console.log("Email sent:", info.messageId);
         return info;
-    } catch (error) {
-        console.error("Error sending email:", error);
-        throw new Error("Failed to send email");
+    } catch (error: any) {
+        console.error("CRITICAL: Error sending profile completion email:", error);
+        // Throw a more descriptive error for the frontend to show
+        const detail = error?.message || "Unknown SMTP error";
+        throw new Error(`SMTP Error: ${detail}`);
     }
 }
 export async function sendResetPasswordEmail(to: string, token: string) {
@@ -62,8 +69,9 @@ export async function sendResetPasswordEmail(to: string, token: string) {
         const info = await transporter.sendMail(mailOptions);
         console.log("Reset email sent:", info.messageId);
         return info;
-    } catch (error) {
-        console.error("Error sending reset email:", error);
-        throw new Error("Failed to send email");
+    } catch (error: any) {
+        console.error("CRITICAL: Error sending reset email:", error);
+        const detail = error?.message || "Unknown SMTP error";
+        throw new Error(`SMTP Error: ${detail}`);
     }
 }
