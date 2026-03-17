@@ -9,11 +9,12 @@ const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT),
     secure: false, // true for 465, false for other ports
+    family: 4, // Force IPv4 to avoid ENETUNREACH on IPv6
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
     },
-});
+} as any);
 
 
 export async function sendProfileCompletionEmail(to: string, token: string) {
