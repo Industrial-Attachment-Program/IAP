@@ -1959,13 +1959,12 @@ export default function StudentLogbookPage() {
                                                                             <div key={g.id} className="flex items-center gap-2">
                                                                                 <button
                                                                                     type="button"
-                                                                                    onClick={() => !isLocked && updateLogField(expandedWeek, 'grade', g.id)}
-                                                                                    disabled={isLocked}
+                                                                                    onClick={() => {}}
+                                                                                    disabled={true}
                                                                                     className={cn(
                                                                                         "h-6 w-6 border-2 border-slate-900 rounded-sm flex items-center justify-center transition-all",
                                                                                         currentLog.grade === g.id ? "bg-slate-900" : "bg-white",
-                                                                                        !isLocked && "hover:bg-slate-100 cursor-pointer",
-                                                                                        isLocked && "opacity-60 cursor-not-allowed"
+                                                                                        "opacity-60 cursor-not-allowed"
                                                                                     )}
                                                                                 >
                                                                                     {currentLog.grade === g.id && <Check className="h-4 w-4 text-white" />}
@@ -2001,9 +2000,9 @@ export default function StudentLogbookPage() {
                                                                                         });
                                                                                         return supervisorName;
                                                                                     })()}
-                                                                                    onChange={(e) => updateLogField(expandedWeek, 'supervisorName', e.target.value)}
+                                                                                    onChange={() => {}}
                                                                                     placeholder="Enter supervisor's full name"
-                                                                                    disabled={isLocked}
+                                                                                    disabled={true}
                                                                                 />
                                                                             </div>
                                                                             <div className="space-y-2">
@@ -2012,8 +2011,8 @@ export default function StudentLogbookPage() {
                                                                                     type="date"
                                                                                     className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
                                                                                     value={currentLog.supervisorDate ? new Date(currentLog.supervisorDate).toISOString().split('T')[0] : ""}
-                                                                                    onChange={(e) => updateLogField(expandedWeek, 'supervisorDate', e.target.value)}
-                                                                                    disabled={isLocked}
+                                                                                    onChange={() => {}}
+                                                                                    disabled={true}
                                                                                 />
                                                                             </div>
                                                                         </div>
@@ -2024,8 +2023,8 @@ export default function StudentLogbookPage() {
                                                                                 className="w-full h-20 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
                                                                                 placeholder="Add comments for the student..."
                                                                                 value={currentLog.supervisorNote || ""}
-                                                                                onChange={(e) => updateLogField(expandedWeek, 'supervisorNote', e.target.value)}
-                                                                                disabled={isLocked}
+                                                                                onChange={() => {}}
+                                                                                disabled={true}
                                                                             />
                                                                         </div>
 

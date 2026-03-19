@@ -56,8 +56,15 @@ export function ProfileForm() {
                     const roleResult = await apiFetch(`${roleEndpoint}/${roleId}`);
                     if (roleResult.ok) {
                         const data = roleResult.data;
-                        // For students, the response might be { student: { ... } }
-                        const actualData = data.student || data.supervisor || data.liaison || data;
+                        // For students, prioritize the top-level data if it's a student record
+                        let actualData = data;
+                        if (userData.role === "STUDENT") {
+                            actualData = data.student || data;
+                        } else if (userData.role === "SUPERVISOR") {
+                            actualData = data.supervisor || data;
+                        } else if (userData.role === "LIAISON") {
+                            actualData = data.liaison || data;
+                        }
                         
                         // Auto-fill supervisor details from relationship if available
                         if (actualData.supervisor?.user && userData.role === "STUDENT") {
@@ -96,7 +103,7 @@ export function ProfileForm() {
                         if (actualData.firstName && actualData.lastName) {
                             const fullName = `${actualData.firstName} ${actualData.lastName}`;
                             setName(fullName);
-                        } else if (!name && actualData.user?.name) {
+                        } else if (actualData.user?.name) {
                             setName(actualData.user.name);
                         }
                         
@@ -298,7 +305,7 @@ export function ProfileForm() {
                 </div>
             </div>
 
-            {/* Role Specific Details */}
+            {/* Internship Details */}
             {user?.role === "STUDENT" && (
                 <div className="space-y-4">
                     <h4 className="font-bold text-primary flex items-center gap-2">
@@ -344,46 +351,64 @@ export function ProfileForm() {
                         <Input
                             label="Internship Start Date"
                             type="date"
-                            value={extraFields.internshipStart ? new Date(extraFields.internshipStart).toISOString().split('T')[0] : ""}
+                            value={extraFields.internshipStart || ""}
                             onChange={(e) => setExtraFields({ ...extraFields, internshipStart: e.target.value })}
                         />
                         <Input
                             label="Internship End Date"
                             type="date"
-                            value={extraFields.internshipEnd ? new Date(extraFields.internshipEnd).toISOString().split('T')[0] : ""}
+                            value={extraFields.internshipEnd || ""}
                             onChange={(e) => setExtraFields({ ...extraFields, internshipEnd: e.target.value })}
                         />
                     </div>
+                </div>
+            )}
 
-                    <div className="mt-6 space-y-4">
-                        <h5 className="font-semibold text-primary/80 text-sm italic">Industry Supervisor Details</h5>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Industry and Supervisors Details */}
+            {user?.role === "STUDENT" && (
+                <div className="space-y-4">
+                    <h4 className="font-bold text-primary flex items-center gap-2">
+                        <span className="w-1 h-4 bg-primary rounded-full"></span>
+                        Industry and Supervisors Details
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-2xl bg-neutral/5 border border-neutral/10">
+                        <Input
+                            label="Supervisor Name"
+                            value={extraFields.supervisorName || ""}
+                            onChange={(e) => setExtraFields({ ...extraFields, supervisorName: e.target.value })}
+                        />
+                        <Input
+                            label="Supervisor Designation"
+                            value={extraFields.supervisorDesignation || ""}
+                            onChange={(e) => setExtraFields({ ...extraFields, supervisorDesignation: e.target.value })}
+                            placeholder="e.g. CTO, Manager"
+                        />
+                        <Input
+                            label="Supervisor Email"
+                            value={extraFields.supervisorEmail || ""}
+                            onChange={(e) => setExtraFields({ ...extraFields, supervisorEmail: e.target.value })}
+                        />
+                        <Input
+                            label="Supervisor Phone"
+                            value={extraFields.supervisorPhone || ""}
+                            onChange={(e) => setExtraFields({ ...extraFields, supervisorPhone: e.target.value })}
+                        />
+                        <Input
+                            label="Supervisor Department"
+                            value={extraFields.supervisorDepartment || ""}
+                            onChange={(e) => setExtraFields({ ...extraFields, supervisorDepartment: e.target.value })}
+                            placeholder="e.g. IT Department"
+                        />
+                        <div className="grid grid-cols-2 gap-4">
                             <Input
-                                label="Supervisor Name"
-                                value={extraFields.supervisorName || ""}
-                                onChange={(e) => setExtraFields({ ...extraFields, supervisorName: e.target.value })}
+                                label="Liaison Officer Name"
+                                value={extraFields.liaisonOfficerName || ""}
+                                onChange={(e) => setExtraFields({ ...extraFields, liaisonOfficerName: e.target.value })}
                             />
                             <Input
-                                label="Supervisor Designation"
-                                value={extraFields.supervisorDesignation || ""}
-                                onChange={(e) => setExtraFields({ ...extraFields, supervisorDesignation: e.target.value })}
-                                placeholder="e.g. CTO, Manager"
-                            />
-                            <Input
-                                label="Supervisor Email"
-                                value={extraFields.supervisorEmail || ""}
-                                onChange={(e) => setExtraFields({ ...extraFields, supervisorEmail: e.target.value })}
-                            />
-                            <Input
-                                label="Supervisor Phone"
-                                value={extraFields.supervisorPhone || ""}
-                                onChange={(e) => setExtraFields({ ...extraFields, supervisorPhone: e.target.value })}
-                            />
-                            <Input
-                                label="Supervisor Department"
-                                value={extraFields.supervisorDepartment || ""}
-                                onChange={(e) => setExtraFields({ ...extraFields, supervisorDepartment: e.target.value })}
-                                placeholder="e.g. IT Department"
+                                label="Liaison Officer Phone"
+                                value={extraFields.liaisonOfficerPhone || ""}
+                                onChange={(e) => setExtraFields({ ...extraFields, liaisonOfficerPhone: e.target.value })}
                             />
                         </div>
                     </div>
