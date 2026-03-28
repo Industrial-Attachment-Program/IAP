@@ -8,7 +8,8 @@ import {
     MapPin,
     Settings,
     LogOut,
-    Check
+    Check,
+    Bell
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useEffect, useState } from "react";
@@ -40,19 +41,28 @@ interface User {
 export function Sidebar({ role, userId: propUserId }: SidebarProps) {
     const pathname = usePathname();
     const [user, setUser] = useState<User | null>(null);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
-        // Read user data from localStorage only — no API call to prevent rate limiting
-        if (typeof window !== "undefined") {
+        const fetchUnread = async () => {
             const storedUser = localStorage.getItem("user");
             if (storedUser) {
                 try {
                     setUser(JSON.parse(storedUser));
+                    const result = await apiFetch('/notifications');
+                    if (result.ok && Array.isArray(result.data)) {
+                        const unread = result.data.filter((n: any) => !n.read).length;
+                        setUnreadCount(unread);
+                    }
                 } catch (e) {
                     console.error("Sidebar: Local storage parse failed", e);
                 }
             }
-        }
+        };
+
+        fetchUnread();
+        const interval = setInterval(fetchUnread, 15000); // 15s poll
+        return () => clearInterval(interval);
     }, [propUserId]);
 
     const handleSignOut = () => {
@@ -68,19 +78,23 @@ export function Sidebar({ role, userId: propUserId }: SidebarProps) {
             { href: "/admin/users", label: "Manage Users", icon: Users },
             { href: "/admin/reports", label: "Reports", icon: FileText },
             { href: "/admin/visits", label: "LO Visits", icon: MapPin },
+            { href: "/notifications", label: "Notifications", icon: Bell },
         ],
         supervisor: [
             { href: `/supervisor/${user?.supervisorId || user?.supervisorProfile?.id || user?.id || propUserId}`, label: "Dashboard", icon: LayoutDashboard },
             { href: `/supervisor/${user?.supervisorId || user?.supervisorProfile?.id || user?.id || propUserId}/ratings`, label: "Ratings", icon: Users },
             { href: `/supervisor/${user?.supervisorId || user?.supervisorProfile?.id || user?.id || propUserId}/logbook`, label: "Logbook", icon: FileText },
+            { href: "/notifications", label: "Notifications", icon: Bell },
         ],
         student: [
             { href: `/student/${user?.studentId || user?.studentProfile?.id || user?.id || propUserId}`, label: "Dashboard", icon: LayoutDashboard },
             { href: "/student/logbook", label: "Logbook", icon: FileText },
             { href: "/student/tasks", label: "Tasks", icon: Check },
+            { href: "/notifications", label: "Notifications", icon: Bell },
         ],
         liaison: [
             { href: `/liaison/${user?.liaisonId || user?.liaisonProfile?.id || user?.id || propUserId}`, label: "Portal", icon: LayoutDashboard },
+            { href: "/notifications", label: "Notifications", icon: Bell },
         ],
     };
 
@@ -104,12 +118,19 @@ export function Sidebar({ role, userId: propUserId }: SidebarProps) {
                                 <Link
                                     href={link.href}
                                     className={cn(
-                                        "flex items-center rounded-lg p-2 text-neutral-dark hover:bg-neutral/5 group transition-colors",
+                                        "flex items-center justify-between rounded-lg p-2 text-neutral-dark hover:bg-neutral/5 group transition-colors",
                                         isActive && "bg-primary/10 text-primary"
                                     )}
                                 >
-                                    <Icon className={cn("h-5 w-5 transition duration-75", isActive ? "text-primary" : "text-neutral group-hover:text-primary")} />
-                                    <span className="ml-3">{link.label}</span>
+                                    <div className="flex items-center">
+                                        <Icon className={cn("h-5 w-5 transition duration-75", isActive ? "text-primary" : "text-neutral group-hover:text-primary")} />
+                                        <span className="ml-3">{link.label}</span>
+                                    </div>
+                                    {link.label === "Notifications" && unreadCount > 0 && (
+                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-error text-[10px] font-bold text-white mr-1">
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    )}
                                 </Link>
                             </li>
                         );

@@ -36,7 +36,7 @@ export default function NotificationsPage() {
         try {
             const result = await apiFetch(`/notifications`);
             if (result.ok) {
-                setNotifications(result.data.notifications || []);
+                setNotifications(result.data || []);
             }
         } catch (error) {
             console.error("Error fetching notifications:", error);

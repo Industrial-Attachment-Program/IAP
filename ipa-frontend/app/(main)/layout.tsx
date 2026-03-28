@@ -71,6 +71,7 @@ export default function MainLayout({
                     (pathname.startsWith("/liaison") && userRole === "LIAISON") ||
                     (pathname.startsWith("/student") && userRole === "STUDENT") ||
                     pathname === "/settings" ||
+                    pathname === "/notifications" ||
                     pathname === "/login" ||
                     pathname === "/complete-profile" ||
                     pathname.startsWith("/reset-password") ||

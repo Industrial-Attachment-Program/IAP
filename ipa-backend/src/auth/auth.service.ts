@@ -20,6 +20,10 @@ export class AuthService {
         studentProfile: true,
         supervisorProfile: true,
         liaisonProfile: true,
+        notifications: {
+          orderBy: { createdAt: 'desc' },
+          take: 50, // Limit for performance
+        },
       },
     });
 
@@ -122,6 +126,8 @@ export class AuthService {
       };
     }
 
+    userResponse.notifications = user.notifications || [];
+
     return {
       message: 'Login successful',
       user: userResponse,
@@ -136,6 +142,10 @@ export class AuthService {
         studentProfile: true,
         supervisorProfile: true,
         liaisonProfile: true,
+        notifications: {
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        },
       }
     });
 
@@ -169,6 +179,8 @@ export class AuthService {
         id: user.liaisonProfile.id,
       };
     }
+
+    userResponse.notifications = user.notifications || [];
 
     return userResponse;
   }

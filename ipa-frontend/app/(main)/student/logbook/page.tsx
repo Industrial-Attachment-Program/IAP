@@ -1646,9 +1646,16 @@ export default function StudentLogbookPage() {
                                                 label="Intake Year" 
                                                 value={student?.intakeYear} 
                                                 onChange={(v) => setStudent({ ...student, intakeYear: v })} 
-                                                options={Array.from({ length: 10 }, (_, i) => ({ label: String(new Date().getFullYear() - i), value: String(new Date().getFullYear() - i) }))}
+                                                options={[
+                                                    { label: "2025/2026", value: "2025/2026" },
+                                                    { label: "2024/2025", value: "2024/2025" },
+                                                    { label: "2023/2024", value: "2023/2024" },
+                                                    { label: "2022/2023", value: "2022/2023" },
+                                                    { label: "2021/2022", value: "2021/2022" },
+                                                    { label: "2020/2021", value: "2020/2021" },
+                                                    { label: "2019/2020", value: "2019/2020" }
+                                                ]}
                                             />
-                                            <LogbookInput label="Graduation Year" value={student?.graduationYear} onChange={(v) => setStudent({ ...student, graduationYear: v })} />
                                             <LogbookInput label="Cell Phone No." value={student?.phone} onChange={(v) => setStudent({ ...student, phone: v })} />
                                             <LogbookInput label="Email Address" value={student?.email || student?.user?.email} onChange={(v) => setStudent({ ...student, email: v })} readonly={!!student?.user?.email} />
                                             <LogbookInput label="Address" value={student?.address} onChange={(v) => setStudent({ ...student, address: v })} />
@@ -1942,7 +1949,10 @@ export default function StudentLogbookPage() {
 
                                                             {/* Supervisor Section Area */}
                                                             <div className="border-t border-slate-900 grid grid-cols-[1fr_3fr]">
-                                                                <div className="p-4 border-r border-slate-900 font-bold bg-white flex items-center justify-center text-center leading-tight uppercase">Supervisor<br />Evaluation</div>
+                                                                <div className="p-4 border-r border-slate-900 font-bold bg-white flex flex-col items-center justify-center text-center leading-tight uppercase gap-2">
+                                                                    <span>Supervisor<br />Evaluation</span>
+                                                                    <span className="text-[10px] text-red-500 font-black lowercase">(supervisor only)</span>
+                                                                </div>
                                                                 <div className="p-6 bg-white space-y-6">
                                                                     <p className="text-[11px] font-medium text-slate-500 leading-tight">
                                                                         Indicate the appropriate grade by ticking the corresponding box based on the general observations of the student activities performance.
